@@ -135,7 +135,7 @@ function dashboard() {
 
   const FETCH_URL = `https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`;
   const SAVE_URL = `https://n8n.sapidblue.in/webhook/save-configs`;
-  const AUTH_LINK_URL = `https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${userId}`; // ✅ Updated here
+  const AUTH_LINK_URL = `https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${userId}`;
 
   const industryOptions = ['AI','FINTECH','IGAMING','CYBERSECURITY'];
   const industryMap = { AI:123, FINTECH:456, IGAMING:789, CYBERSECURITY:3130 };
@@ -171,8 +171,8 @@ function dashboard() {
       try {
         const res = await fetch(AUTH_LINK_URL);
         const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
+        if (Array.isArray(data) && data.length > 0 && data[0].url) {
+          window.location.href = data[0].url;
         } else {
           alert('Failed to generate Unipile auth link');
         }
