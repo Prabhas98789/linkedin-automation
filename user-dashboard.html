@@ -153,15 +153,28 @@ function dashboard() {
       try {
         const res = await fetch(FETCH_URL);
         const data = await res.json();
-        this.users = Array.isArray(data) && data.length > 0 ? data.map(u => ({
-          first_name: u.first_name||'', last_name: u.last_name||'', account_id: u.account_id||'',
-          industry: u.industry||'', q: u.q||'', topic_token: u.topic_token||'',
-          section_token: u.section_token||'', geography: u.geography||'', active: u.active == 1,
-          scheduled_time: (u.scheduled_time||'').slice(0,5)
-        })) : [];
+
+        // Accept empty data with unipile_id (i.e., account connected but no config yet)
+        if (data && data.unipile_id) {
+          this.users = [{
+            first_name: '',
+            last_name: '',
+            account_id: data.unipile_id || '',
+            industry: '',
+            q: '',
+            topic_token: '',
+            section_token: '',
+            geography: '',
+            active: data.status === 'CONNECTED',
+            scheduled_time: ''
+          }];
+        } else {
+          this.users = [];
+        }
       } catch (e) {
         console.error(e);
-        alert('Failed to fetch user config.');
+        alert('Failed to fetch user config. Please try again.');
+        this.users = [];
       } finally {
         this.loading = false;
       }
