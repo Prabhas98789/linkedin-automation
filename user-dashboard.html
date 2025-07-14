@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-100">
+<html lang="en" class="bg-gray-50">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -7,36 +7,25 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="min-h-screen p-6 font-sans text-black" x-data="dashboard()" x-init="fetchData()">
-  <div class="max-w-7xl mx-auto space-y-6 flex flex-col">
-
-    <div>
-      <a href="https://prabhas98789.github.io/Job-scraper/repo.html"
-         class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow hover:bg-blue-700 transition">
-        ← Back to Tools Page
-      </a>
-    </div>
+<body class="min-h-screen p-6 font-sans text-gray-900" x-data="dashboard()" x-init="fetchData()">
+  <div class="max-w-6xl mx-auto space-y-6">
 
     <div class="flex justify-between items-center">
-      <h1 class="text-4xl font-bold text-gray-800">Your LinkedIn Configs</h1>
+      <h1 class="text-3xl font-bold text-gray-800">LinkedIn Config</h1>
       <template x-if="users.length">
-        <div class="flex gap-3 flex-wrap">
+        <div class="flex gap-2 flex-wrap">
           <button @click="fetchData()" :disabled="loading"
-            class="p-2 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 transition disabled:opacity-30">
-            🔄
-          </button>
+            class="p-2 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300 disabled:opacity-30">🔄</button>
           <button @click="editing = !editing"
             :class="editing ? 'bg-red-600 hover:bg-red-700' : 'bg-yellow-500 hover:bg-yellow-600'"
-            class="px-4 py-2 rounded-full font-medium text-white shadow transition">
+            class="px-4 py-2 rounded text-white font-medium shadow transition">
             <template x-if="!editing">✏️ Edit</template>
             <template x-if="editing">❌ Cancel</template>
           </button>
           <button @click="addUser()" :disabled="!editing"
-            class="px-4 py-2 rounded-full bg-green-600 hover:bg-green-700 text-white shadow transition disabled:opacity-30">
-            ➕ Add
-          </button>
+            class="px-4 py-2 rounded bg-green-600 hover:bg-green-700 text-white shadow disabled:opacity-30">➕ Add</button>
           <button @click="saveAll()" :disabled="saving || !editing"
-            class="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow transition disabled:opacity-30">
+            class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-700 text-white shadow disabled:opacity-30">
             <template x-if="!saving">📂 Save</template>
             <template x-if="saving">⏳ Saving...</template>
           </button>
@@ -45,75 +34,59 @@
     </div>
 
     <template x-if="!users.length && !loading">
-      <div class="bg-white p-8 border border-dashed border-gray-400 rounded-xl text-center">
-        <h2 class="text-xl font-semibold text-gray-700 mb-4">No LinkedIn account found</h2>
+      <div class="bg-white p-6 border border-dashed border-gray-400 rounded-xl text-center">
+        <h2 class="text-xl font-semibold text-gray-700 mb-3">No LinkedIn account found</h2>
         <p class="mb-4 text-gray-600">Click below to connect your LinkedIn account via Unipile.</p>
         <button @click="connectUnipile()"
-          class="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">
-          🔗 Connect LinkedIn Account
-        </button>
+          class="px-6 py-3 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700 transition">🔗 Connect LinkedIn Account</button>
       </div>
     </template>
 
     <template x-if="users.length">
-      <div class="overflow-x-auto rounded-xl border border-gray-300 shadow bg-white">
+      <div class="overflow-x-auto border border-gray-300 shadow rounded bg-white">
         <table class="min-w-full divide-y divide-gray-300 text-sm">
           <thead class="bg-gray-200 text-left text-gray-700">
             <tr>
               <th class="px-4 py-3">First Name</th>
               <th class="px-4 py-3">Last Name</th>
               <th class="px-4 py-3">Account ID</th>
-              <th class="px-4 py-3">Industry</th>
-              <th class="px-4 py-3">Category</th>
-              <th class="px-4 py-3">Select Mode</th>
-              <th class="px-4 py-3">Geography</th>
               <th class="px-4 py-3 text-center">Active</th>
               <th class="px-4 py-3">Time</th>
-              <th class="px-4 py-3">View</th>
+              <th class="px-4 py-3">Industry</th>
+              <th class="px-4 py-3">Geography</th>
+              <th class="px-4 py-3 text-center">Action</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-200 bg-white">
             <template x-for="(user, idx) in users" :key="idx">
               <tr class="hover:bg-gray-50 transition">
-                <td class="px-4 py-2"><input type="text" x-model="user.first_name" :disabled="!editing" class="w-full border-b border-gray-300 px-2 py-1 bg-transparent focus:outline-none" /></td>
-                <td class="px-4 py-2"><input type="text" x-model="user.last_name" :disabled="!editing" class="w-full border-b border-gray-300 px-2 py-1 bg-transparent focus:outline-none" /></td>
-                <td class="px-4 py-2"><input type="text" x-model="user.account_id" :disabled="!editing" class="w-full border-b border-gray-300 px-2 py-1 bg-transparent focus:outline-none" /></td>
+                <td class="px-4 py-2"><input type="text" x-model="user.first_name" :disabled="!editing" class="w-full border-b px-2 py-1 bg-transparent focus:outline-none" /></td>
+                <td class="px-4 py-2"><input type="text" x-model="user.last_name" :disabled="!editing" class="w-full border-b px-2 py-1 bg-transparent focus:outline-none" /></td>
+                <td class="px-4 py-2"><input type="text" x-model="user.account_id" :disabled="!editing" class="w-full border-b px-2 py-1 bg-transparent focus:outline-none" /></td>
+                <td class="px-4 py-2 text-center"><input type="checkbox" x-model="user.active" :disabled="!editing" class="h-5 w-5 text-green-600" /></td>
+                <td class="px-4 py-2"><input type="time" x-model="user.scheduled_time" :disabled="!editing" class="w-full border-b px-2 py-1 bg-transparent" /></td>
                 <td class="px-4 py-2">
-                  <select x-model="user.industry" class="w-full border-b border-gray-300 px-2 py-1 bg-white">
+                  <select x-model="user.industry" class="w-full border-b px-2 py-1 bg-white" :disabled="!editing">
                     <template x-for="opt in industryOptions" :key="opt">
                       <option :value="opt" x-text="opt"></option>
                     </template>
                   </select>
                 </td>
                 <td class="px-4 py-2">
-                  <select x-model="user.q" class="w-full border-b border-gray-300 px-2 py-1 bg-white">
-                    <template x-for="opt in qOptions" :key="opt">
+                  <select x-model="user.geography" class="w-full border-b px-2 py-1 bg-white" :disabled="!editing">
+                    <template x-for="opt in geographyOptions" :key="opt">
                       <option :value="opt" x-text="opt"></option>
                     </template>
                   </select>
                 </td>
-                <td class="px-4 py-2">
-                  <select x-model="user.topic_token" class="w-full border-b border-gray-300 px-2 py-1 bg-white">
-                    <template x-for="mode in modeOptions" :key="mode">
-                      <option :value="mode" x-text="mode"></option>
-                    </template>
-                  </select>
-                </td>
-                <td class="px-4 py-2">
-                  <select x-model="user.geography" class="w-full border-b border-gray-300 px-2 py-1 bg-white">
-                    <template x-for="loc in geographyOptions" :key="loc">
-                      <option :value="loc" x-text="loc"></option>
-                    </template>
-                  </select>
-                </td>
                 <td class="px-4 py-2 text-center">
-                  <input type="checkbox" x-model="user.active" :disabled="!editing" class="h-5 w-5 text-green-600" />
-                </td>
-                <td class="px-4 py-2">
-                  <input type="time" x-model="user.scheduled_time" :disabled="!editing" class="w-full border-b border-gray-300 px-2 py-1 bg-transparent focus:outline-none" />
-                </td>
-                <td class="px-4 py-2 text-center">
-                  <a :href="`profile.html?uid=${user.account_id}`" target="_blank" class="text-blue-600 hover:underline">View</a>
+                  <button
+                    @click="toggleConnection(user)"
+                    class="px-3 py-1 rounded text-white font-medium shadow transition"
+                    :class="user.active ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'">
+                    <template x-if="user.active">Disconnect</template>
+                    <template x-if="!user.active">Connect</template>
+                  </button>
                 </td>
               </tr>
             </template>
@@ -121,6 +94,7 @@
         </table>
       </div>
     </template>
+
   </div>
 
 <script>
@@ -139,14 +113,12 @@ function dashboard() {
 
   const industryOptions = ['AI','FINTECH','IGAMING','CYBERSECURITY'];
   const industryMap = { AI:123, FINTECH:456, IGAMING:789, CYBERSECURITY:3130 };
-  const qOptions = ['AI','CYBERSECURITY','FINTECH','RETAIL','GAMING'];
-  const modeOptions = ['Con+Rec+Com','Con+Rec','Rec+Com'];
   const geographyOptions = ['USA','UAE','SAUDI','AUSTRALIA','INDIA'];
   const geographyMap = { USA:103644278, UAE:104305776, SAUDI:100459316, AUSTRALIA:101452733, INDIA:102713980 };
 
   return {
     users: [], loading: true, saving: false, editing: false,
-    industryOptions, qOptions, modeOptions, geographyOptions,
+    industryOptions, geographyOptions,
 
     async fetchData() {
       this.loading = true;
@@ -154,16 +126,12 @@ function dashboard() {
         const res = await fetch(FETCH_URL);
         const data = await res.json();
 
-        // Accept empty data with unipile_id (i.e., account connected but no config yet)
         if (data && data.unipile_id) {
           this.users = [{
             first_name: '',
             last_name: '',
             account_id: data.unipile_id || '',
             industry: '',
-            q: '',
-            topic_token: '',
-            section_token: '',
             geography: '',
             active: data.status === 'CONNECTED',
             scheduled_time: ''
@@ -198,9 +166,14 @@ function dashboard() {
     addUser() {
       if (this.editing) this.users.push({
         first_name: '', last_name: '', account_id: '', industry: '',
-        q: '', topic_token: '', section_token: '', geography: '',
-        active: false, scheduled_time: ''
+        geography: '', active: false, scheduled_time: ''
       });
+    },
+
+    toggleConnection(user) {
+      user.active = !user.active;
+      user.status = user.active ? 'CONNECTED' : 'DISCONNECTED';
+      // Optional: Hook API call here later
     },
 
     async saveAll() {
