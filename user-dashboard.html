@@ -135,7 +135,7 @@ function dashboard() {
 
   const FETCH_URL = `https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`;
   const SAVE_URL = `https://n8n.sapidblue.in/webhook/save-configs`;
-  const AUTH_LINK_URL = `https://your-backend.com/generate-auth-link?user_id=${userId}`;
+  const AUTH_LINK_URL = `https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${userId}`; // ✅ Updated here
 
   const industryOptions = ['AI','FINTECH','IGAMING','CYBERSECURITY'];
   const industryMap = { AI:123, FINTECH:456, IGAMING:789, CYBERSECURITY:3130 };
