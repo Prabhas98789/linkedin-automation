@@ -106,10 +106,11 @@ function connectionsPage() {
         const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}`);
         const data = await res.json();
 
-        if (Array.isArray(data.connections)) {
-          this.connections = data.connections.map(this.cleanObject);
-        } else if (Array.isArray(data)) {
+        // Handles both plain array and { connections: [...] }
+        if (Array.isArray(data)) {
           this.connections = data.map(this.cleanObject);
+        } else if (Array.isArray(data.connections)) {
+          this.connections = data.connections.map(this.cleanObject);
         } else {
           this.connections = [];
         }
