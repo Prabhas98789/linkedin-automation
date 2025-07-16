@@ -49,37 +49,40 @@
       No connections found.
     </div>
 
- <!-- Table -->
-<div x-show="paginatedConnections.length > 0" class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
-  <table class="min-w-full divide-y divide-gray-200">
-    <thead class="bg-gray-100">
-      <tr>
-        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Photo</th>
-        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Headline</th>
-        <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-gray-100 bg-white">
-      <template x-for="conn in paginatedConnections" :key="conn.connection_urn">
-        <tr class="hover:bg-gray-50">
-          <td class="px-6 py-4">
-            <img :src="clean(conn.profile_picture_url)" alt="Profile" class="w-10 h-10 rounded-full object-cover border" />
-          </td>
-          <td class="px-6 py-4 text-sm font-medium" x-text="`${clean(conn.first_name)} ${clean(conn.last_name)}`"></td>
-          <td class="px-6 py-4 text-sm text-gray-600" x-text="clean(conn.headline) || '—'"></td>
-          <td class="px-6 py-4 text-sm flex gap-3">
-            <a :href="clean(conn.public_profile_url)" class="text-blue-500 hover:underline" target="_blank">View</a>
-            <a
-              :href="`message.html?uid=${uid}&user_id=${userId}&connection_urn=${encodeURIComponent(conn.connection_urn)}`"
-              class="text-green-600 hover:underline"
-            >Message</a>
-          </td>
-        </tr>
-      </template>
-    </tbody>
-  </table>
-</div>
+    <!-- Table -->
+    <div x-show="paginatedConnections.length > 0" class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Photo</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Headline</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 bg-white">
+          <template x-for="conn in paginatedConnections" :key="conn.connection_urn">
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4">
+                <img :src="clean(conn.profile_picture_url)" alt="Profile" class="w-10 h-10 rounded-full object-cover border" />
+              </td>
+              <td class="px-6 py-4 text-sm font-medium" x-text="`${clean(conn.first_name)} ${clean(conn.last_name)}`"></td>
+              <td class="px-6 py-4 text-sm text-gray-600" x-text="clean(conn.headline) || '—'"></td>
+              <td class="px-6 py-4 text-sm flex gap-3">
+                <!-- Message button comes first -->
+                <a
+                  :href="`message.html?uid=${uid}&user_id=${userId}&connection_urn=${encodeURIComponent(conn.connection_urn)}`"
+                  class="text-green-600 hover:underline"
+                >Message</a>
+                <!-- View button comes after -->
+                <a :href="clean(conn.public_profile_url)" class="text-blue-500 hover:underline" target="_blank">View</a>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    
 
 
     <!-- Pagination -->
