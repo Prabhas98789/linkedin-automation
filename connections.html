@@ -7,12 +7,23 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="connectionsPage()" x-init="checkParams()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
+<body x-data="connectionsPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
+
   <div class="max-w-6xl mx-auto space-y-6">
     <!-- Header -->
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-3xl font-bold">Connections</h1>
       <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline">← Back to Profile</a>
+    </div>
+
+    <!-- Filter Input -->
+    <div class="flex items-center gap-2">
+      <input type="text" placeholder="Search name/headline..." x-model="filterText" @keydown.enter="applyFilter"
+             class="px-4 py-2 border border-gray-300 rounded w-64" />
+      <button @click="applyFilter" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+        Search
+      </button>
+      <button @click="clearFilter" class="text-sm text-gray-500 hover:underline">Clear</button>
     </div>
 
     <!-- Debug Info -->
@@ -105,6 +116,7 @@
       return {
         uid: '',
         userId: '',
+        filterText: '',
         paginatedConnections: [],
         loading: false,
         fetchFailed: false,
@@ -112,10 +124,11 @@
         itemsPerPage: 10,
         totalPages: 1,
 
-        checkParams() {
+        initPage() {
           const params = new URLSearchParams(window.location.search);
           this.uid = params.get("uid") || '';
           this.userId = params.get("user_id") || '';
+          this.filterText = params.get("filter_text") || '';
 
           if (!this.uid || !this.userId) {
             window.location.href = "auth.html";
@@ -139,7 +152,7 @@
 
           try {
             while (cleaned.length < desired && retries < maxRetries) {
-              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}`;
+              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.filterText)}`;
               const res = await fetch(url);
               const data = await res.json();
 
@@ -176,6 +189,16 @@
           this.fetchAllConnections(page);
         },
 
+        applyFilter() {
+          this.currentPage = 1;
+          this.fetchAllConnections(1);
+        },
+
+        clearFilter() {
+          this.filterText = '';
+          this.applyFilter();
+        },
+
         clean(val) {
           return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || '');
         },
@@ -197,9 +220,11 @@
 
           pages.push(1);
           if (this.currentPage > range + 2) pages.push('...');
+
           for (let i = this.currentPage - range; i <= this.currentPage + range; i++) {
             if (i > 1 && i < this.totalPages) pages.push(i);
           }
+
           if (this.currentPage < this.totalPages - range - 1) pages.push('...');
           pages.push(this.totalPages);
           return pages;
