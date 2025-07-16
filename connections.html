@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" class="bg-gray-50">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Connections</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -64,16 +64,37 @@
     </template>
 
     <!-- Pagination -->
-    <div class="flex justify-center mt-6 space-x-2" x-show="totalPages > 1 && !fetchFailed">
+    <div class="flex justify-center mt-6 space-x-1" x-show="totalPages > 1 && !fetchFailed">
+      <!-- Previous -->
+      <button
+        @click="goToPage(currentPage - 1)"
+        :disabled="currentPage === 1"
+        :class="currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
+        class="px-3 py-1 rounded text-sm shadow"
+      >
+        Previous
+      </button>
+
+      <!-- Page numbers -->
       <template x-for="page in totalPages" :key="page">
         <button
           @click="goToPage(page)"
-          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
-          class="px-4 py-1 rounded shadow text-sm hover:bg-gray-100"
+          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
+          class="px-3 py-1 rounded text-sm shadow"
         >
           <span x-text="page"></span>
         </button>
       </template>
+
+      <!-- Next -->
+      <button
+        @click="goToPage(currentPage + 1)"
+        :disabled="currentPage === totalPages"
+        :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
+        class="px-3 py-1 rounded text-sm shadow"
+      >
+        Next
+      </button>
     </div>
   </div>
 
@@ -143,6 +164,7 @@ function connectionsPage() {
     },
 
     goToPage(page) {
+      if (page < 1 || page > this.totalPages) return;
       this.fetchAllConnections(page);
     },
 
