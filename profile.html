@@ -9,7 +9,19 @@
 </head>
 <body x-data="linkedinProfile()" x-init="fetchProfile()" class="min-h-screen bg-gray-50 text-gray-800 font-sans">
 
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold">LinkedIn Profile</h1>
+      <button
+        @click="reloadProfile"
+        class="px-4 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded shadow"
+        :disabled="loading"
+      >
+        <span x-show="!loading">🔄 Reload</span>
+        <span x-show="loading">⏳ Reloading...</span>
+      </button>
+    </div>
+
     <template x-if="!profile">
       <div class="text-center text-gray-500 py-10">Loading profile...</div>
     </template>
@@ -54,7 +66,7 @@
       </div>
     </template>
 
-    <div class="mt-6 text-center">
+    <div class="text-center">
       <a :href="`user-dashboard.html?user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Dashboard</a>
     </div>
   </div>
@@ -66,13 +78,14 @@ function linkedinProfile() {
 
   if (!uid || !userId) {
     alert("Missing uid or user_id. Redirecting...");
-    window.location.href = "dashboard.html";
+    window.location.href = "user-dashboard.html";
     return;
   }
 
   return {
     profile: null,
     userId,
+    loading: false,
 
     async fetchProfile() {
       try {
@@ -89,6 +102,21 @@ function linkedinProfile() {
       } catch (e) {
         console.error(e);
         alert("Failed to load profile.");
+      }
+    },
+
+    async reloadProfile() {
+      this.loading = true;
+      try {
+        await fetch(`https://n8n.sapidblue.in/webhook/Linkedin-User-Profile-fetch-all-data?account_id=${uid}&user_id=${userId}`);
+        setTimeout(() => {
+          this.fetchProfile();
+          this.loading = false;
+        }, 1500);
+      } catch (error) {
+        console.error(error);
+        alert("Failed to refresh data.");
+        this.loading = false;
       }
     }
   };
