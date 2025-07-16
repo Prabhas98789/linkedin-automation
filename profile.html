@@ -19,7 +19,11 @@
     <template x-if="profile">
       <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
         <div class="flex flex-col md:flex-row gap-6 p-6">
-          <img :src="profile.profile_picture_url_large || profile.profile_picture_url" alt="Profile Picture" class="w-32 h-32 rounded-full object-cover border">
+          <img 
+            :src="profile.profile_picture_url_large || profile.profile_picture_url || 'https://via.placeholder.com/150'"
+            alt="Profile Picture"
+            class="w-32 h-32 rounded-full object-cover border"
+          >
           <div class="flex-1 space-y-2">
             <h2 class="text-xl font-semibold" x-text="profile.first_name + ' ' + profile.last_name"></h2>
             <p class="text-gray-600 text-sm" x-text="profile.headline"></p>
@@ -30,36 +34,48 @@
           </div>
         </div>
 
-        <div class="w-full">
-          <img :src="profile.background_picture_url" alt="Background" class="w-full max-h-56 object-cover">
-        </div>
+        <template x-if="profile.background_picture_url">
+          <div class="w-full">
+            <img :src="profile.background_picture_url" alt="Background" class="w-full max-h-56 object-cover">
+          </div>
+        </template>
 
         <div class="p-6 text-sm text-gray-400" x-text="'Last updated at: ' + profile.updated_at"></div>
       </div>
     </template>
 
     <div>
-      <a href="dashboard.html" class="text-blue-600 hover:underline text-sm">← Back to Dashboard</a>
+      <a :href="`dashboard.html?user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Dashboard</a>
     </div>
   </div>
 
 <script>
 function linkedinProfile() {
   const uid = new URLSearchParams(window.location.search).get("uid");
-  if (!uid) {
-    alert("Missing uid. Redirecting...");
+  const userId = new URLSearchParams(window.location.search).get("user_id");
+
+  if (!uid || !userId) {
+    alert("Missing uid or user_id. Redirecting...");
     window.location.href = "dashboard.html";
     return;
   }
 
   return {
     profile: null,
+    userId,
 
     async fetchProfile() {
       try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-profile-of-user-linkedin?account_id=${uid}`);
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-profile-of-user-linkedin?account_id=${uid}&user_id=${userId}`);
         const data = await res.json();
-        this.profile = Array.isArray(data) ? data[0] : data;
+
+        if (data && data.account_id) {
+          this.profile = data;
+        } else if (Array.isArray(data) && data[0]?.account_id) {
+          this.profile = data[0];
+        } else {
+          throw new Error("Invalid profile format");
+        }
       } catch (e) {
         console.error(e);
         alert("Failed to load profile.");
