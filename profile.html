@@ -7,25 +7,40 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="linkedinProfile()" x-init="fetchProfile()" class="min-h-screen p-6 text-gray-800 font-sans">
+<body x-data="linkedinProfile()" x-init="fetchProfile()" class="min-h-screen bg-gray-50 text-gray-800 font-sans">
 
-  <div class="max-w-4xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold">LinkedIn Profile</h1>
-
+  <div class="max-w-4xl mx-auto">
     <template x-if="!profile">
-      <div class="text-gray-500">Loading profile...</div>
+      <div class="text-center text-gray-500 py-10">Loading profile...</div>
     </template>
 
     <template x-if="profile">
-      <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
-        <div class="flex flex-col md:flex-row gap-6 p-6">
+      <div class="relative bg-white shadow rounded-lg overflow-hidden">
+        
+        <!-- Background banner -->
+        <div class="h-48 bg-gray-200">
           <img 
-            :src="profile.profile_picture_url_large || profile.profile_picture_url || 'https://via.placeholder.com/150'"
-            alt="Profile Picture"
-            class="w-32 h-32 rounded-full object-cover border"
-          >
-          <div class="flex-1 space-y-2">
-            <h2 class="text-xl font-semibold" x-text="profile.first_name + ' ' + profile.last_name"></h2>
+            :src="profile.background_picture_url || ''" 
+            alt="Background Banner" 
+            class="w-full h-48 object-cover"
+            x-show="profile.background_picture_url"
+          />
+        </div>
+
+        <!-- Profile section -->
+        <div class="relative px-6 pt-6 pb-8">
+          <!-- Profile Picture -->
+          <div class="absolute -top-16 left-6">
+            <img 
+              :src="profile.profile_picture_url_large || profile.profile_picture_url || 'https://via.placeholder.com/150'" 
+              alt="Profile" 
+              class="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
+            />
+          </div>
+
+          <!-- Info -->
+          <div class="ml-40 mt-2 space-y-1">
+            <h2 class="text-2xl font-bold" x-text="profile.first_name + ' ' + profile.last_name"></h2>
             <p class="text-gray-600 text-sm" x-text="profile.headline"></p>
             <p class="text-gray-500 text-sm" x-text="'📍 ' + profile.location"></p>
             <p class="text-gray-500 text-sm" x-text="'✉️ ' + profile.email"></p>
@@ -34,17 +49,12 @@
           </div>
         </div>
 
-        <template x-if="profile.background_picture_url">
-          <div class="w-full">
-            <img :src="profile.background_picture_url" alt="Background" class="w-full max-h-56 object-cover">
-          </div>
-        </template>
-
-        <div class="p-6 text-sm text-gray-400" x-text="'Last updated at: ' + profile.updated_at"></div>
+        <!-- Footer -->
+        <div class="px-6 pb-4 text-sm text-gray-400 text-right" x-text="'Last updated at: ' + profile.updated_at"></div>
       </div>
     </template>
 
-    <div>
+    <div class="mt-6 text-center">
       <a :href="`dashboard.html?user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Dashboard</a>
     </div>
   </div>
