@@ -7,41 +7,44 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="connectionsPage()" x-init="fetchConnections()" class="min-h-screen p-6 text-gray-800 font-sans">
+<body x-data="connectionsPage()" x-init="fetchConnections()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
 
-  <div class="max-w-5xl mx-auto space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-bold">Connections</h1>
+  <div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-3xl font-bold">Connections</h1>
       <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Profile</a>
     </div>
 
+    <!-- Loading -->
     <template x-if="loading">
-      <div class="text-center text-gray-500">Loading connections...</div>
+      <div class="text-center text-gray-500 py-10">Loading connections...</div>
     </template>
 
+    <!-- No Connections -->
     <template x-if="!loading && connections.length === 0">
-      <div class="text-center text-gray-400">No connections found.</div>
+      <div class="text-center text-gray-400 py-10">No connections found.</div>
     </template>
 
+    <!-- Connection Table -->
     <template x-if="connections.length > 0">
-      <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
+      <div class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-100">
             <tr>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Profile</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Photo</th>
               <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
               <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Headline</th>
-              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Public Profile</th>
+              <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">LinkedIn</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-gray-100">
+          <tbody class="divide-y divide-gray-100 bg-white">
             <template x-for="conn in connections" :key="conn.connection_urn">
-              <tr>
+              <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4">
-                  <img :src="conn.profile_picture_url" alt="Profile" class="w-10 h-10 rounded-full object-cover">
+                  <img :src="conn.profile_picture_url || 'https://via.placeholder.com/40'" alt="Profile" class="w-10 h-10 rounded-full object-cover border">
                 </td>
-                <td class="px-6 py-4 text-sm" x-text="conn.first_name + ' ' + conn.last_name"></td>
-                <td class="px-6 py-4 text-sm" x-text="conn.headline"></td>
+                <td class="px-6 py-4 text-sm font-medium" x-text="conn.first_name + ' ' + conn.last_name"></td>
+                <td class="px-6 py-4 text-sm text-gray-600" x-text="conn.headline || '—'"></td>
                 <td class="px-6 py-4 text-sm">
                   <a :href="conn.public_profile_url" class="text-blue-500 hover:underline" target="_blank">View</a>
                 </td>
@@ -53,12 +56,12 @@
     </template>
 
     <!-- Pagination Controls -->
-    <div class="flex justify-center mt-4 space-x-2" x-show="totalPages > 1">
+    <div class="flex justify-center mt-6 space-x-2" x-show="totalPages > 1">
       <template x-for="page in totalPages" :key="page">
         <button
           @click="goToPage(page)"
-          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'"
-          class="px-3 py-1 rounded shadow text-sm"
+          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300'"
+          class="px-4 py-1 rounded shadow text-sm hover:bg-gray-100"
         >
           <span x-text="page"></span>
         </button>
@@ -99,14 +102,16 @@ function connectionsPage() {
         }
       } catch (e) {
         console.error(e);
-        alert("Failed to load connections");
+        alert("Failed to load connections.");
       }
       this.loading = false;
     },
 
     goToPage(page) {
-      this.currentPage = page;
-      this.fetchConnections();
+      if (page !== this.currentPage) {
+        this.currentPage = page;
+        this.fetchConnections();
+      }
     }
   }
 }
