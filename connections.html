@@ -15,6 +15,11 @@
       <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Profile</a>
     </div>
 
+    <!-- Debug display -->
+    <div class="text-sm text-gray-500" x-show="connections.length > 0">
+      Loaded: <span x-text="connections.length"></span> connections
+    </div>
+
     <template x-if="loading">
       <div class="text-center text-gray-500 py-10">Loading connections...</div>
     </template>
@@ -82,16 +87,31 @@ function connectionsPage() {
     totalPages: 1,
 
     async fetchAllConnections() {
+      if (!this.uid || !this.userId) {
+        alert("Missing uid or user_id");
+        window.location.href = "user-dashboard.html";
+        return;
+      }
+
       this.loading = true;
       try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${uid}&user_id=${userId}`);
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}`);
         const data = await res.json();
-        this.connections = Array.isArray(data) ? data.map(this.cleanObject) : [];
+        
+        // If response is an object with `connections` key
+        if (Array.isArray(data.connections)) {
+          this.connections = data.connections.map(this.cleanObject);
+        } else if (Array.isArray(data)) {
+          this.connections = data.map(this.cleanObject);
+        } else {
+          this.connections = [];
+        }
+
         this.totalPages = Math.ceil(this.connections.length / this.itemsPerPage);
         this.goToPage(1);
       } catch (e) {
-        console.error(e);
-        alert("Failed to fetch connections.");
+        console.error("Fetch error:", e);
+        alert("Failed to load connections.");
       }
       this.loading = false;
     },
@@ -103,7 +123,6 @@ function connectionsPage() {
       this.paginatedConnections = this.connections.slice(start, end);
     },
 
-    // Removes leading/trailing quotes and escapes
     clean(value) {
       if (!value) return '';
       return typeof value === 'string' ? value.replace(/^"(.*)"$/, '$1') : value;
