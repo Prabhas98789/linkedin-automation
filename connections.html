@@ -79,8 +79,8 @@
 
 <script>
 function connectionsPage() {
-  const uid = new URLSearchParams(window.location.search).get("uid");
-  const userId = new URLSearchParams(window.location.search).get("user_id");
+  const uid = "AfswY-f4Rm-UXgh905O-0A";  // Hardcoded account_id
+  const userId = 1;                      // Hardcoded user_id
 
   return {
     uid,
@@ -94,27 +94,26 @@ function connectionsPage() {
     totalPages: 1,
 
     async fetchAllConnections() {
-      if (!this.uid || !this.userId) {
-        window.location.href = "user-dashboard.html";
-        return;
-      }
-
       this.loading = true;
       this.fetchFailed = false;
 
       try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}`);
-        const data = await res.json();
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${uid}&user_id=${userId}`);
+        const rawData = await res.json();
 
-        // Handles both plain array and { connections: [...] }
-        if (Array.isArray(data)) {
-          this.connections = data.map(this.cleanObject);
-        } else if (Array.isArray(data.connections)) {
-          this.connections = data.connections.map(this.cleanObject);
-        } else {
-          this.connections = [];
+        const uniqueMap = new Map();
+
+        const dataArray = Array.isArray(rawData) ? rawData : rawData.connections || [];
+
+        for (const entry of dataArray) {
+          const cleaned = this.cleanObject(entry);
+          // Deduplicate using member_id
+          if (!uniqueMap.has(cleaned.member_id)) {
+            uniqueMap.set(cleaned.member_id, cleaned);
+          }
         }
 
+        this.connections = Array.from(uniqueMap.values());
         this.totalPages = Math.ceil(this.connections.length / this.itemsPerPage);
         this.goToPage(1);
       } catch (e) {
@@ -134,7 +133,11 @@ function connectionsPage() {
 
     clean(value) {
       if (!value) return '';
-      return typeof value === 'string' ? value.replace(/^"(.*)"$/, '$1') : value;
+      if (typeof value === 'string') {
+        // Remove surrounding quotes (if any)
+        return value.replace(/^"+|"+$/g, '');
+      }
+      return value;
     },
 
     cleanObject(obj) {
@@ -147,5 +150,6 @@ function connectionsPage() {
   };
 }
 </script>
+
 </body>
 </html>
