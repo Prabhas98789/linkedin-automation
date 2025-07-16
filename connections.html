@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="connectionsPage()" x-init="fetchAllConnections()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
+<body x-data="connectionsPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
 
   <div class="max-w-6xl mx-auto space-y-6">
     <div class="flex justify-between items-center mb-4">
@@ -18,7 +18,7 @@
     <!-- Retry Button -->
     <div class="text-center" x-show="fetchFailed && !loading">
       <p class="text-gray-500 mb-2">Failed to load connections.</p>
-      <button @click="fetchAllConnections" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+      <button @click="fetchAllConnections(currentPage)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
         Retry
       </button>
     </div>
@@ -79,13 +79,9 @@
 
 <script>
 function connectionsPage() {
-  const uid = "AfswY-f4Rm-UXgh905O-0A";  // Hardcoded account_id
-  const userId = 1;                      // Hardcoded user_id
-
   return {
-    uid,
-    userId,
-    connections: [],
+    uid: '',
+    userId: '',
     paginatedConnections: [],
     loading: false,
     fetchFailed: false,
@@ -93,25 +89,51 @@ function connectionsPage() {
     itemsPerPage: 10,
     totalPages: 1,
 
-    async fetchAllConnections() {
+    initPage() {
+      const urlParams = new URLSearchParams(window.location.search);
+      this.uid = urlParams.get("uid") || '';
+      this.userId = urlParams.get("user_id") || '';
+      this.fetchAllConnections(this.currentPage);
+    },
+
+    async fetchAllConnections(page = 1) {
       this.loading = true;
       this.fetchFailed = false;
 
+      const seenIds = new Set();
+      const finalResults = [];
+
+      let offset = (page - 1) * this.itemsPerPage;
+      const batchSize = this.itemsPerPage;
+      let totalCount = 0;
+
       try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${uid}&user_id=${userId}`);
-        const data = await res.json();
+        while (finalResults.length < this.itemsPerPage) {
+          const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${batchSize}`;
+          const res = await fetch(url);
+          const rawData = await res.json();
 
-        let rawArray = [];
+          const dataArray = Array.isArray(rawData) ? rawData : rawData.connections || [];
+          totalCount = rawData.total_count || totalCount || (page * batchSize);
 
-        if (Array.isArray(data)) {
-          rawArray = data;
-        } else if (Array.isArray(data.connections)) {
-          rawArray = data.connections;
+          if (dataArray.length === 0) break;
+
+          for (const entry of dataArray) {
+            const cleaned = this.cleanObject(entry);
+            if (!seenIds.has(cleaned.member_id)) {
+              seenIds.add(cleaned.member_id);
+              finalResults.push(cleaned);
+            }
+            if (finalResults.length === this.itemsPerPage) break;
+          }
+
+          offset += batchSize;
         }
 
-        this.connections = rawArray.map(this.cleanObject);
-        this.totalPages = Math.ceil(this.connections.length / this.itemsPerPage);
-        this.goToPage(1);
+        this.paginatedConnections = finalResults;
+        this.totalPages = Math.ceil(totalCount / this.itemsPerPage);
+        this.currentPage = page;
+
       } catch (e) {
         console.error("Fetch error:", e);
         this.fetchFailed = true;
@@ -121,10 +143,7 @@ function connectionsPage() {
     },
 
     goToPage(page) {
-      this.currentPage = page;
-      const start = (page - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      this.paginatedConnections = this.connections.slice(start, end);
+      this.fetchAllConnections(page);
     },
 
     clean(value) {
@@ -145,7 +164,6 @@ function connectionsPage() {
   };
 }
 </script>
-
 
 </body>
 </html>
