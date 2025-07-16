@@ -15,19 +15,25 @@
       <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Profile</a>
     </div>
 
-    <!-- Debug display -->
-    <div class="text-sm text-gray-500" x-show="connections.length > 0">
-      Loaded: <span x-text="connections.length"></span> connections
+    <!-- Retry Button -->
+    <div class="text-center" x-show="fetchFailed && !loading">
+      <p class="text-gray-500 mb-2">Failed to load connections.</p>
+      <button @click="fetchAllConnections" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+        Retry
+      </button>
     </div>
 
+    <!-- Loading -->
     <template x-if="loading">
       <div class="text-center text-gray-500 py-10">Loading connections...</div>
     </template>
 
-    <template x-if="!loading && paginatedConnections.length === 0">
+    <!-- No Connections -->
+    <template x-if="!loading && !fetchFailed && paginatedConnections.length === 0">
       <div class="text-center text-gray-400 py-10">No connections found.</div>
     </template>
 
+    <!-- Table -->
     <template x-if="paginatedConnections.length > 0">
       <div class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
         <table class="min-w-full divide-y divide-gray-200">
@@ -58,7 +64,7 @@
     </template>
 
     <!-- Pagination -->
-    <div class="flex justify-center mt-6 space-x-2" x-show="totalPages > 1">
+    <div class="flex justify-center mt-6 space-x-2" x-show="totalPages > 1 && !fetchFailed">
       <template x-for="page in totalPages" :key="page">
         <button
           @click="goToPage(page)"
@@ -82,23 +88,24 @@ function connectionsPage() {
     connections: [],
     paginatedConnections: [],
     loading: false,
+    fetchFailed: false,
     currentPage: 1,
     itemsPerPage: 10,
     totalPages: 1,
 
     async fetchAllConnections() {
       if (!this.uid || !this.userId) {
-        alert("Missing uid or user_id");
         window.location.href = "user-dashboard.html";
         return;
       }
 
       this.loading = true;
+      this.fetchFailed = false;
+
       try {
         const res = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}`);
         const data = await res.json();
-        
-        // If response is an object with `connections` key
+
         if (Array.isArray(data.connections)) {
           this.connections = data.connections.map(this.cleanObject);
         } else if (Array.isArray(data)) {
@@ -111,8 +118,9 @@ function connectionsPage() {
         this.goToPage(1);
       } catch (e) {
         console.error("Fetch error:", e);
-        alert("Failed to load connections.");
+        this.fetchFailed = true;
       }
+
       this.loading = false;
     },
 
