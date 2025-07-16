@@ -12,10 +12,9 @@
   <div class="max-w-6xl mx-auto space-y-6">
     <div class="flex justify-between items-center mb-4">
       <h1 class="text-3xl font-bold">Connections</h1>
-      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 hover:underline text-sm">← Back to Profile</a>
+      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline">← Back to Profile</a>
     </div>
 
-    <!-- Retry Button -->
     <div class="text-center" x-show="fetchFailed && !loading">
       <p class="text-gray-500 mb-2">Failed to load connections.</p>
       <button @click="fetchAllConnections(currentPage)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
@@ -23,17 +22,14 @@
       </button>
     </div>
 
-    <!-- Loading -->
     <template x-if="loading">
       <div class="text-center text-gray-500 py-10">Loading connections...</div>
     </template>
 
-    <!-- No Connections -->
     <template x-if="!loading && !fetchFailed && paginatedConnections.length === 0">
       <div class="text-center text-gray-400 py-10">No connections found.</div>
     </template>
 
-    <!-- Table -->
     <template x-if="paginatedConnections.length > 0">
       <div class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
         <table class="min-w-full divide-y divide-gray-200">
@@ -49,9 +45,9 @@
             <template x-for="conn in paginatedConnections" :key="conn.connection_urn">
               <tr class="hover:bg-gray-50">
                 <td class="px-6 py-4">
-                  <img :src="clean(conn.profile_picture_url)" alt="Profile" class="w-10 h-10 rounded-full object-cover border">
+                  <img :src="clean(conn.profile_picture_url)" alt="Profile photo" class="w-10 h-10 rounded-full object-cover border" />
                 </td>
-                <td class="px-6 py-4 text-sm font-medium" x-text="clean(conn.first_name) + ' ' + clean(conn.last_name)"></td>
+                <td class="px-6 py-4 text-sm font-medium" x-text="`${clean(conn.first_name)} ${clean(conn.last_name)}`"></td>
                 <td class="px-6 py-4 text-sm text-gray-600" x-text="clean(conn.headline) || '—'"></td>
                 <td class="px-6 py-4 text-sm">
                   <a :href="clean(conn.public_profile_url)" class="text-blue-500 hover:underline" target="_blank">View</a>
@@ -64,23 +60,21 @@
     </template>
 
     <!-- Pagination -->
-    <div class="flex justify-center mt-6 space-x-1" x-show="totalPages > 1 && !fetchFailed">
+    <div class="flex justify-center mt-6 flex-wrap gap-2" x-show="totalPages > 1">
       <!-- Previous -->
       <button
         @click="goToPage(currentPage - 1)"
         :disabled="currentPage === 1"
-        :class="currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
-        class="px-3 py-1 rounded text-sm shadow"
-      >
-        Previous
-      </button>
+        class="px-3 py-1 rounded text-sm shadow border"
+        :class="currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'"
+      >Previous</button>
 
-      <!-- Page numbers -->
-      <template x-for="page in totalPages" :key="page">
+      <!-- Dynamic Page Numbers -->
+      <template x-for="page in Array.from({ length: totalPages }, (_, i) => i + 1)" :key="page">
         <button
           @click="goToPage(page)"
-          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
-          class="px-3 py-1 rounded text-sm shadow"
+          class="px-3 py-1 rounded text-sm shadow border"
+          :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'"
         >
           <span x-text="page"></span>
         </button>
@@ -90,102 +84,95 @@
       <button
         @click="goToPage(currentPage + 1)"
         :disabled="currentPage === totalPages"
-        :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'"
-        class="px-3 py-1 rounded text-sm shadow"
-      >
-        Next
-      </button>
+        class="px-3 py-1 rounded text-sm shadow border"
+        :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'"
+      >Next</button>
     </div>
   </div>
 
-<script>
-function connectionsPage() {
-  return {
-    uid: '',
-    userId: '',
-    paginatedConnections: [],
-    loading: false,
-    fetchFailed: false,
-    currentPage: 1,
-    itemsPerPage: 10,
-    totalPages: 1,
+  <script>
+    function connectionsPage() {
+      return {
+        uid: '',
+        userId: '',
+        paginatedConnections: [],
+        loading: false,
+        fetchFailed: false,
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalPages: 1,
 
-    initPage() {
-      const urlParams = new URLSearchParams(window.location.search);
-      this.uid = urlParams.get("uid") || '';
-      this.userId = urlParams.get("user_id") || '';
-      this.fetchAllConnections(this.currentPage);
-    },
+        initPage() {
+          const params = new URLSearchParams(window.location.search);
+          this.uid = params.get("uid") || '';
+          this.userId = params.get("user_id") || '';
+          this.fetchAllConnections(this.currentPage);
+        },
 
-    async fetchAllConnections(page = 1) {
-      this.loading = true;
-      this.fetchFailed = false;
+        async fetchAllConnections(page = 1) {
+          this.loading = true;
+          this.fetchFailed = false;
 
-      const seenIds = new Set();
-      const finalResults = [];
+          const seen = new Set();
+          const results = [];
 
-      let offset = (page - 1) * this.itemsPerPage;
-      const batchSize = this.itemsPerPage;
-      let totalCount = 0;
+          let offset = (page - 1) * this.itemsPerPage;
+          const limit = this.itemsPerPage;
+          let totalCount = 0;
 
-      try {
-        while (finalResults.length < this.itemsPerPage) {
-          const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${batchSize}`;
-          const res = await fetch(url);
-          const rawData = await res.json();
+          try {
+            while (results.length < this.itemsPerPage) {
+              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${limit}`;
+              const res = await fetch(url);
+              const rawData = await res.json();
 
-          const dataArray = Array.isArray(rawData) ? rawData : rawData.connections || [];
-          totalCount = rawData.total_count || totalCount || (page * batchSize);
+              const connections = Array.isArray(rawData) ? rawData : rawData.connections || [];
+              totalCount = rawData.total_count || totalCount || (page * limit);
 
-          if (dataArray.length === 0) break;
+              if (connections.length === 0) break;
 
-          for (const entry of dataArray) {
-            const cleaned = this.cleanObject(entry);
-            if (!seenIds.has(cleaned.member_id)) {
-              seenIds.add(cleaned.member_id);
-              finalResults.push(cleaned);
+              for (const item of connections) {
+                const entry = this.cleanObject(item);
+                if (!seen.has(entry.member_id)) {
+                  seen.add(entry.member_id);
+                  results.push(entry);
+                }
+                if (results.length === this.itemsPerPage) break;
+              }
+
+              offset += limit;
             }
-            if (finalResults.length === this.itemsPerPage) break;
+
+            this.paginatedConnections = results;
+            this.totalPages = Math.ceil(totalCount / this.itemsPerPage);
+            this.currentPage = page;
+
+            console.log("Page:", page, "Total Pages:", this.totalPages);
+          } catch (err) {
+            console.error("Fetch error:", err);
+            this.fetchFailed = true;
           }
 
-          offset += batchSize;
+          this.loading = false;
+        },
+
+        goToPage(page) {
+          if (page < 1 || page > this.totalPages) return;
+          this.fetchAllConnections(page);
+        },
+
+        clean(val) {
+          return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || '');
+        },
+
+        cleanObject(obj) {
+          const result = {};
+          for (const key in obj) result[key] = this.clean(obj[key]);
+          return result;
         }
-
-        this.paginatedConnections = finalResults;
-        this.totalPages = Math.ceil(totalCount / this.itemsPerPage);
-        this.currentPage = page;
-
-      } catch (e) {
-        console.error("Fetch error:", e);
-        this.fetchFailed = true;
-      }
-
-      this.loading = false;
-    },
-
-    goToPage(page) {
-      if (page < 1 || page > this.totalPages) return;
-      this.fetchAllConnections(page);
-    },
-
-    clean(value) {
-      if (!value) return '';
-      if (typeof value === 'string') {
-        return value.replace(/^"+|"+$/g, '').trim();
-      }
-      return value;
-    },
-
-    cleanObject(obj) {
-      const cleaned = {};
-      for (const key in obj) {
-        cleaned[key] = this.clean(obj[key]);
-      }
-      return cleaned;
+      };
     }
-  };
-}
-</script>
+  </script>
 
 </body>
 </html>
