@@ -8,7 +8,6 @@
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body x-data="sequencePage()" x-init="fetchSequences(); fetchLocations()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
-
   <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex justify-between items-center">
       <h1 class="text-3xl font-bold">Sequences</h1>
@@ -20,9 +19,20 @@
     <!-- Sequence List -->
     <div class="space-y-2">
       <template x-for="seq in sequences" :key="seq.id">
-        <div class="p-4 border rounded shadow bg-white">
-          <div class="font-semibold text-lg" x-text="seq.name"></div>
-          <div class="text-sm text-gray-600" x-text="'Steps: ' + seq.steps.length"></div>
+        <div class="p-4 border rounded shadow bg-white flex justify-between items-center">
+          <div>
+            <div class="font-semibold text-lg" x-text="seq.name"></div>
+            <div class="text-sm text-gray-600" x-text="'Steps: ' + seq.steps.length"></div>
+          </div>
+          <label class="flex items-center text-sm">
+            <input
+              type="checkbox"
+              :checked="seq.status === 'running'"
+              @change="toggleSequence(seq.id)"
+              class="mr-2"
+            />
+            Active
+          </label>
         </div>
       </template>
     </div>
@@ -153,7 +163,26 @@
         },
 
         isStepTypeUsed(type, currentIndex) {
+          const uniqueTypes = ['connect', 'like', 'comment'];
+          if (!uniqueTypes.includes(type)) return false;
           return this.newSequence.steps.some((step, idx) => step.type === type && idx !== currentIndex);
+        },
+
+        async toggleSequence(seqId) {
+          try {
+            await fetch('https://n8n.sapidblue.in/webhook/toggle-sequence', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sequence_id: seqId,
+                account_id: uid,
+                user_id: userId
+              })
+            });
+            this.fetchSequences();
+          } catch (e) {
+            console.error("Failed to toggle sequence", e);
+          }
         },
 
         async submitSequence() {
