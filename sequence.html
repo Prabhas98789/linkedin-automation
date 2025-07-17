@@ -12,7 +12,7 @@
   <div class="max-w-5xl mx-auto space-y-6">
     <div class="flex justify-between items-center">
       <h1 class="text-3xl font-bold">Sequences</h1>
-      <button @click="showBuilder = !showBuilder" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+      <button @click="showBuilder = true" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
         + Create New Sequence
       </button>
     </div>
@@ -27,54 +27,66 @@
       </template>
     </div>
 
-    <!-- Sequence Builder -->
-    <div x-show="showBuilder" class="border rounded p-4 bg-white shadow mt-6">
-      <h2 class="text-xl font-semibold mb-2">Create New Sequence</h2>
+    <!-- Modal -->
+    <div x-show="showBuilder" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg" @click.away="showBuilder = false">
+        <h2 class="text-xl font-semibold mb-4">Create New Sequence</h2>
 
-      <!-- Filters -->
-      <div class="grid grid-cols-2 gap-4 mb-4">
-        <input type="text" placeholder="Location" x-model="newSequence.filters.location" class="px-3 py-2 border rounded w-full">
-        <input type="text" placeholder="Title / Position" x-model="newSequence.filters.title" class="px-3 py-2 border rounded w-full">
-      </div>
-
-      <!-- Steps -->
-      <template x-for="(step, index) in newSequence.steps" :key="index">
-        <div class="border-t pt-4 mt-4 space-y-2">
-          <div class="flex gap-3 items-center">
-            <select x-model="step.type" class="px-3 py-2 border rounded">
-              <option value="connect">Connect</option>
-              <option value="like">Like</option>
-              <option value="comment">Comment</option>
-              <option value="message">Message</option>
-            </select>
-
-            <input type="number" min="0" placeholder="Delay" x-model.number="step.delay" class="px-2 py-1 border rounded w-24">
-            <select x-model="step.delay_unit" class="px-2 py-1 border rounded">
-              <option value="hours">Hours</option>
-              <option value="days">Days</option>
-            </select>
-
-            <button @click="removeStep(index)" class="text-red-600 hover:underline text-sm">Remove</button>
-          </div>
-
-          <!-- Message Inputs -->
-          <div x-show="step.type === 'message'" class="pl-2">
-            <textarea x-model="step.message" placeholder="Enter message or AI prompt..." rows="3" class="w-full border rounded p-2"></textarea>
-            <label class="inline-flex items-center mt-1">
-              <input type="checkbox" x-model="step.ai" class="mr-2"> Generate with AI
-            </label>
-          </div>
+        <!-- Filters -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Position / Title</label>
+          <input type="text" x-model="newSequence.filters.title" class="w-full px-3 py-2 border rounded" placeholder="e.g. Software Engineer">
         </div>
-      </template>
 
-      <!-- Add Step Button -->
-      <button @click="addStep" class="mt-4 px-4 py-2 bg-gray-100 border rounded hover:bg-gray-200 text-sm">+ Add Step</button>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <select x-model="newSequence.filters.location" class="w-full px-3 py-2 border rounded">
+            <option value="">Select a location</option>
+            <template x-for="loc in locationOptions" :key="loc.id">
+              <option :value="loc.id" x-text="loc.title"></option>
+            </template>
+          </select>
+        </div>
 
-      <!-- Submit Button -->
-      <div class="mt-6">
-        <button @click="submitSequence" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
-          Create Sequence
-        </button>
+        <!-- Steps -->
+        <template x-for="(step, index) in newSequence.steps" :key="index">
+          <div class="border-t pt-4 mt-4 space-y-2">
+            <div class="flex gap-3 items-center">
+              <select x-model="step.type" class="px-3 py-2 border rounded">
+                <option value="connect">Connect</option>
+                <option value="like">Like</option>
+                <option value="comment">Comment</option>
+                <option value="message">Message</option>
+              </select>
+
+              <input type="number" min="0" placeholder="Delay" x-model.number="step.delay" class="px-2 py-1 border rounded w-24">
+              <select x-model="step.delay_unit" class="px-2 py-1 border rounded">
+                <option value="hours">Hours</option>
+                <option value="days">Days</option>
+              </select>
+
+              <button @click="removeStep(index)" class="text-red-600 hover:underline text-sm">Remove</button>
+            </div>
+
+            <div x-show="step.type === 'message'" class="pl-2">
+              <textarea x-model="step.message" placeholder="Enter message or AI prompt..." rows="3" class="w-full border rounded p-2"></textarea>
+              <label class="inline-flex items-center mt-1">
+                <input type="checkbox" x-model="step.ai" class="mr-2"> Generate with AI
+              </label>
+            </div>
+          </div>
+        </template>
+
+        <button @click="addStep" class="mt-4 px-4 py-2 bg-gray-100 border rounded hover:bg-gray-200 text-sm">+ Add Step</button>
+
+        <div class="mt-6 flex justify-between">
+          <button @click="submitSequence" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+            Create Sequence
+          </button>
+          <button @click="showBuilder = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -87,6 +99,108 @@
       return {
         sequences: [],
         showBuilder: false,
+                locationOptions: [{'title': 'Australia', 'id': '101452733'},
+         {'title': 'United States', 'id': '103644278'},
+         {'title': 'Argentina', 'id': '100446943'},
+         {'title': 'Algeria', 'id': '106395874'},
+         {'title': 'Atlanta Metropolitan Area', 'id': '90000052'},
+         {'title': 'United Kingdom', 'id': '101165590'},
+         {'title': 'Austria', 'id': '103883259'},
+         {'title': 'South Africa', 'id': '104035573'},
+         {'title': 'Arizona, United States', 'id': '106032500'},
+         {'title': 'Andhra Pradesh, India', 'id': '106227689'},
+         {'title': 'New York City Metropolitan Area', 'id': '90000070'},
+         {'title': 'Saudi Arabia', 'id': '100459316'},
+         {'title': 'Greater Delhi Area', 'id': '90009626'},
+         {'title': 'Auvergne-Rhône-Alpes, France', 'id': '103623254'},
+         {'title': 'Amsterdam Area', 'id': '90010383'},
+         {'title': 'Los Angeles Metropolitan Area', 'id': '90000049'},
+         {'title': 'Ahmedabad, Gujarat, India', 'id': '104990346'},
+         {'title': 'Greater São Paulo Area', 'id': '90009574'},
+         {'title': 'Germany', 'id': '101282230'},
+         {'title': 'Andalusia, Spain', 'id': '106151489'},
+         {'title': 'Alberta, Canada', 'id': '103564821'},
+         {'title': 'United Arab Emirates', 'id': '104305776'},
+         {'title': 'Austin, Texas Metropolitan Area', 'id': '90000064'},
+         {'title': 'London Area, United Kingdom', 'id': '90009496'},
+         {'title': 'England, United Kingdom', 'id': '102299470'},
+         {'title': 'Alabama, United States', 'id': '102240587'},
+         {'title': 'Amritsar/Ludhiana Area', 'id': '90009643'},
+         {'title': 'Jakarta Metropolitan Area', 'id': '90010101'},
+         {'title': 'Greater Bengaluru Area', 'id': '90009633'},
+         {'title': 'Angola', 'id': '105371935'},
+         {'title': 'Antioquia, Colombia', 'id': '107163507'},
+         {'title': 'Greater Hyderabad Area', 'id': '90009650'},
+         {'title': 'San Francisco Bay Area', 'id': '90000084'},
+         {'title': 'Washington DC-Baltimore Area', 'id': '90000097'},
+         {'title': 'Assam, India', 'id': '104436408'},
+         {'title': 'Azerbaijan', 'id': '103226548'},
+         {'title': 'Egypt', 'id': '106155005'},
+         {'title': 'Ankara, Türkiye', 'id': '100138681'},
+         {'title': 'Atlanta, Georgia, United States', 'id': '106224388'},
+         {'title': 'Amsterdam, North Holland, Netherlands', 'id': '102011674'},
+         {'title': 'Algiers, Algeria', 'id': '115905703'},
+         {'title': 'Greater Chicago Area', 'id': '90000014'},
+         {'title': 'Abu Dhabi Emirate, United Arab Emirates', 'id': '103720977'},
+         {'title': 'Greater Chennai Area', 'id': '90009647'},
+         {'title': 'Mexico City Metropolitan Area', 'id': '90010045'},
+         {'title': 'Athens Metropolitan Area', 'id': '90010253'},
+         {'title': 'Arkansas, United States', 'id': '102790221'},
+         {'title': 'Albany, New York Metropolitan Area', 'id': '90000016'},
+         {'title': 'Greater Buenos Aires', 'id': '90009870'},
+         {'title': 'Buenos Aires Province, Argentina', 'id': '101279968'},
+         {'title': 'Pune/Pimpri-Chinchwad Area', 'id': '90009642'},
+         {'title': 'Albania', 'id': '102845717'},
+         {'title': 'Al Jizah, Egypt', 'id': '105731762'},
+         {'title': 'Attiki, Greece', 'id': '106238681'},
+         {'title': 'Anhui, China', 'id': '100639213'},
+         {'title': 'Ankara, Ankara, Türkiye', 'id': '103289019'},
+         {'title': 'Austin, Texas, United States', 'id': '104472865'},
+         {'title': 'Greater Kolkata Area', 'id': '90009654'},
+         {'title': 'Miami-Fort Lauderdale Area', 'id': '90000056'},
+         {'title': 'Greater Madrid Metropolitan Area', 'id': '90009790'},
+         {'title': 'Gauteng, South Africa', 'id': '101750971'},
+         {'title': 'Amman, Jordan', 'id': '105255939'},
+         {'title': 'Greater Toronto Area, Canada', 'id': '90009551'},
+         {'title': 'Bogotá D.C. Metropolitan Area', 'id': '90010133'},
+         {'title': 'Mumbai Metropolitan Region', 'id': '90009639'},
+         {'title': 'Afghanistan', 'id': '101240012'},
+         {'title': 'Amazonas, Brazil', 'id': '103948230'},
+         {'title': 'Johannesburg Metropolitan Area', 'id': '90010098'},
+         {'title': 'Algiers, Algiers, Algeria', 'id': '100317990'},
+         {'title': 'Auckland, New Zealand', 'id': '104251235'},
+         {'title': 'Greater Seattle Area', 'id': '90000091'},
+         {'title': 'Apulia, Italy', 'id': '103477765'},
+         {'title': "Abidjan, Côte d'Ivoire", 'id': '107893939'},
+         {'title': 'Alexandria, Egypt', 'id': '105315213'},
+         {'title': 'Greater Paris Metropolitan Region', 'id': '90009659'},
+         {'title': 'Santiago Metropolitan Area', 'id': '90009899'},
+         {'title': 'Ancient City of Damascus Region, Damascus Governorate, Syria',
+          'id': '118544230'},
+         {'title': 'New South Wales, Australia', 'id': '103313686'},
+         {'title': 'Lima Metropolitan Area', 'id': '90010207'},
+         {'title': 'Greater Ahmedabad Area', 'id': '90009627'},
+         {'title': 'Armenia', 'id': '103030111'},
+         {'title': 'Albuquerque-Santa Fe Metropolitan Area', 'id': '90000020'},
+         {'title': 'Greater Sydney Area', 'id': '90009524'},
+         {'title': 'Amman, Amman, Jordan', 'id': '104390420'},
+         {'title': 'Abuja, Federal Capital Territory, Nigeria', 'id': '101711968'},
+         {'title': 'Greater Milan Metropolitan Area', 'id': '90009936'},
+         {'title': 'Auckland, Auckland, New Zealand', 'id': '100749476'},
+         {'title': 'Los Angeles, California, United States', 'id': '102448103'},
+         {'title': 'Greater Phoenix Area', 'id': '90000620'},
+         {'title': 'City of Cape Town, Western Cape, South Africa', 'id': '104231451'},
+         {'title': 'Abu Dhabi, Abu Dhabi Emirate, United Arab Emirates',
+          'id': '104524176'},
+         {'title': 'Detroit Metropolitan Area', 'id': '90000035'},
+         {'title': 'Greater Lucknow Area', 'id': '90009653'},
+         {'title': 'Greater Munich Metropolitan Area', 'id': '90009735'},
+         {'title': 'Greater Melbourne Area', 'id': '90009521'},
+         {'title': 'Victoria, Australia', 'id': '102241850'},
+         {'title': 'Dubai, United Arab Emirates', 'id': '106204383'},
+         {'title': 'Bangkok Metropolitan Area', 'id': '90010335'},
+         {'title': 'Antwerp Metropolitan Area', 'id': '90009603'},
+         {'title': 'Ashburn, Virginia, United States', 'id': '105458072'}],
         newSequence: {
           name: 'New Sequence',
           filters: { location: '', title: '' },
