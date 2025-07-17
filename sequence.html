@@ -1,96 +1,138 @@
 <!DOCTYPE html>
 <html lang="en" class="bg-gray-50">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Create Sequence</title>
+  <title>Sequence Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="sequencePage()" class="min-h-screen bg-gray-50 text-gray-800 font-sans px-4 py-6">
-  <div class="max-w-4xl mx-auto space-y-6">
-    <h1 class="text-2xl font-bold">Create New Sequence</h1>
+<body x-data="sequencePage()" x-init="fetchSequences()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
 
-    <!-- Filters -->
-    <div class="bg-white p-4 rounded-lg shadow space-y-4">
-      <h2 class="text-lg font-semibold">Target Filters</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <input type="text" x-model="filters.location" placeholder="Location (e.g., India)"
-               class="border border-gray-300 rounded px-4 py-2" />
-        <input type="text" x-model="filters.title" placeholder="Job Title (e.g., Software Engineer)"
-               class="border border-gray-300 rounded px-4 py-2" />
-      </div>
+  <div class="max-w-5xl mx-auto space-y-6">
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold">Sequences</h1>
+      <button @click="showBuilder = !showBuilder" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+        + Create New Sequence
+      </button>
     </div>
 
-    <!-- Steps -->
-    <div class="bg-white p-4 rounded-lg shadow space-y-4">
-      <h2 class="text-lg font-semibold">Steps</h2>
-      <template x-for="(step, index) in steps" :key="index">
-        <div class="border p-3 rounded flex flex-col space-y-2">
-          <div class="flex justify-between items-center">
-            <select x-model="step.type" class="border px-2 py-1 rounded">
+    <!-- Sequence List -->
+    <div class="space-y-2">
+      <template x-for="seq in sequences" :key="seq.id">
+        <div class="p-4 border rounded shadow bg-white">
+          <div class="font-semibold text-lg" x-text="seq.name"></div>
+          <div class="text-sm text-gray-600" x-text="'Steps: ' + seq.steps.length"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Sequence Builder -->
+    <div x-show="showBuilder" class="border rounded p-4 bg-white shadow mt-6">
+      <h2 class="text-xl font-semibold mb-2">Create New Sequence</h2>
+
+      <!-- Filters -->
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <input type="text" placeholder="Location" x-model="newSequence.filters.location" class="px-3 py-2 border rounded w-full">
+        <input type="text" placeholder="Title / Position" x-model="newSequence.filters.title" class="px-3 py-2 border rounded w-full">
+      </div>
+
+      <!-- Steps -->
+      <template x-for="(step, index) in newSequence.steps" :key="index">
+        <div class="border-t pt-4 mt-4 space-y-2">
+          <div class="flex gap-3 items-center">
+            <select x-model="step.type" class="px-3 py-2 border rounded">
               <option value="connect">Connect</option>
               <option value="like">Like</option>
               <option value="comment">Comment</option>
               <option value="message">Message</option>
             </select>
-            <button @click="removeStep(index)" class="text-red-500 hover:underline text-sm">Remove</button>
+
+            <input type="number" min="0" placeholder="Delay" x-model.number="step.delay" class="px-2 py-1 border rounded w-24">
+            <select x-model="step.delay_unit" class="px-2 py-1 border rounded">
+              <option value="hours">Hours</option>
+              <option value="days">Days</option>
+            </select>
+
+            <button @click="removeStep(index)" class="text-red-600 hover:underline text-sm">Remove</button>
           </div>
-          <div x-show="step.type === 'message'">
-            <textarea x-model="step.message" placeholder="Enter your message or prompt..."
-                      class="border px-3 py-2 rounded w-full"></textarea>
-            <label class="inline-flex items-center mt-2">
-              <input type="checkbox" x-model="step.use_ai" class="mr-2">
-              <span class="text-sm text-gray-600">Generate message with AI</span>
+
+          <!-- Message Inputs -->
+          <div x-show="step.type === 'message'" class="pl-2">
+            <textarea x-model="step.message" placeholder="Enter message or AI prompt..." rows="3" class="w-full border rounded p-2"></textarea>
+            <label class="inline-flex items-center mt-1">
+              <input type="checkbox" x-model="step.ai" class="mr-2"> Generate with AI
             </label>
           </div>
         </div>
       </template>
-      <button @click="addStep" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
-        ➕ Add Step
-      </button>
-    </div>
 
-    <!-- Submit -->
-    <div class="text-right">
-      <button @click="submitSequence"
-              class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded shadow">
-        ✅ Create Sequence
-      </button>
+      <!-- Add Step Button -->
+      <button @click="addStep" class="mt-4 px-4 py-2 bg-gray-100 border rounded hover:bg-gray-200 text-sm">+ Add Step</button>
+
+      <!-- Submit Button -->
+      <div class="mt-6">
+        <button @click="submitSequence" class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+          Create Sequence
+        </button>
+      </div>
     </div>
   </div>
 
   <script>
     function sequencePage() {
+      const uid = new URLSearchParams(window.location.search).get("uid");
+      const userId = new URLSearchParams(window.location.search).get("user_id");
+
       return {
-        filters: {
-          location: '',
-          title: ''
+        sequences: [],
+        showBuilder: false,
+        newSequence: {
+          name: 'New Sequence',
+          filters: { location: '', title: '' },
+          steps: []
         },
-        steps: [],
+
+        async fetchSequences() {
+          try {
+            const res = await fetch(`https://n8n.sapidblue.in/webhook/list-sequences?user_id=${userId}&account_id=${uid}`);
+            this.sequences = await res.json();
+          } catch (e) {
+            console.error("Failed to fetch sequences", e);
+          }
+        },
 
         addStep() {
-          this.steps.push({ type: 'connect', message: '', use_ai: false });
+          this.newSequence.steps.push({
+            type: 'connect',
+            delay: 0,
+            delay_unit: 'days',
+            message: '',
+            ai: false
+          });
         },
+
         removeStep(index) {
-          this.steps.splice(index, 1);
+          this.newSequence.steps.splice(index, 1);
         },
+
         async submitSequence() {
           const payload = {
-            filters: this.filters,
-            steps: this.steps
+            user_id: userId,
+            account_id: uid,
+            ...this.newSequence
           };
-          console.log("Submitting Sequence:", payload);
 
-          // TODO: Replace with real endpoint
           try {
-            const res = await fetch("https://n8n.sapidblue.in/webhook/create-sequence-entry", {
+            await fetch('https://n8n.sapidblue.in/webhook/create-sequence-entry', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
             });
-            const result = await res.json();
             alert("Sequence created successfully!");
+            this.fetchSequences();
+            this.showBuilder = false;
+            this.newSequence = { name: 'New Sequence', filters: { location: '', title: '' }, steps: [] };
           } catch (e) {
             alert("Failed to create sequence.");
             console.error(e);
