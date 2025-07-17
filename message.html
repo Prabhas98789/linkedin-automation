@@ -78,16 +78,16 @@
 
         initPage() {
           const params = new URLSearchParams(window.location.search);
-          this.uid = params.get('uid') || '';
-          this.userId = params.get('user_id') || '';
+          this.uid = params.get('uid');
+          this.userId = params.get('user_id');
 
-          // Redirect only if uid or userId is missing
           if (!this.uid || !this.userId) {
+            alert('Missing uid or user_id. Redirecting...');
             window.location.href = 'auth.html';
             return;
           }
 
-          // Load sample/dummy people
+          // Dummy connections
           this.people = [
             {
               connection_urn: 'urn:li:fsd_connection:1',
@@ -109,7 +109,7 @@
         selectConnection(person) {
           this.selectedConnection = person;
 
-          // Load dummy chat messages
+          // Dummy chat messages
           this.chatMessages = [
             { id: 1, text: 'Hi there!', timestamp: '10:00 AM', direction: 'incoming' },
             { id: 2, text: 'Hello!', timestamp: '10:01 AM', direction: 'outgoing' }
