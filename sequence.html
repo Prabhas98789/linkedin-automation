@@ -24,15 +24,23 @@
             <div class="font-semibold text-lg" x-text="seq.name"></div>
             <div class="text-sm text-gray-600" x-text="'Steps: ' + seq.steps.length"></div>
           </div>
-          <label class="flex items-center text-sm">
-            <input
-              type="checkbox"
-              :checked="seq.status === 'running'"
-              @change="toggleSequence(seq.id)"
-              class="mr-2"
-            />
-            Active
-          </label>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center text-sm">
+              <input
+                type="checkbox"
+                :checked="seq.status === 'running'"
+                @change="toggleSequence(seq.id)"
+                class="mr-2"
+              />
+              Active
+            </label>
+            <button
+              @click="viewSequence(seq)"
+              class="text-blue-600 text-sm underline hover:text-blue-800"
+            >
+              View
+            </button>
+          </div>
         </div>
       </template>
     </div>
@@ -183,6 +191,11 @@
           } catch (e) {
             console.error("Failed to toggle sequence", e);
           }
+        },
+
+        viewSequence(seq) {
+          alert(`Viewing Sequence: ${seq.name}\nSteps: ${seq.steps.length}`);
+          // Future: window.location.href = `/view-sequence.html?id=${seq.id}`;
         },
 
         async submitSequence() {
