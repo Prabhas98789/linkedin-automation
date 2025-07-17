@@ -62,10 +62,11 @@
           <div class="border-t pt-4 mt-4 space-y-2">
             <div class="flex gap-3 items-center">
               <select x-model="step.type" class="px-3 py-2 border rounded">
-                <option value="connect">Connect</option>
-                <option value="like">Like</option>
-                <option value="comment">Comment</option>
+                <option value="connect" :disabled="isStepTypeUsed('connect', index)">Connect</option>
+                <option value="like" :disabled="isStepTypeUsed('like', index)">Like</option>
+                <option value="comment" :disabled="isStepTypeUsed('comment', index)">Comment</option>
                 <option value="message">Message</option>
+                <option value="view">View</option>
               </select>
 
               <input type="number" min="0" placeholder="Delay" x-model.number="step.delay" class="px-2 py-1 border rounded w-24">
@@ -149,6 +150,10 @@
 
         removeStep(index) {
           this.newSequence.steps.splice(index, 1);
+        },
+
+        isStepTypeUsed(type, currentIndex) {
+          return this.newSequence.steps.some((step, idx) => step.type === type && idx !== currentIndex);
         },
 
         async submitSequence() {
