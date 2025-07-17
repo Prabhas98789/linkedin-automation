@@ -3,116 +3,98 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sequences</title>
+  <title>Create Sequence</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="sequencesPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
-  <div class="max-w-6xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold">Sequences</h1>
-      <button @click="showAddModal = true" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 text-sm">
-        ➕ Add Sequence
+<body x-data="sequencePage()" class="min-h-screen bg-gray-50 text-gray-800 font-sans px-4 py-6">
+  <div class="max-w-4xl mx-auto space-y-6">
+    <h1 class="text-2xl font-bold">Create New Sequence</h1>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-lg shadow space-y-4">
+      <h2 class="text-lg font-semibold">Target Filters</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <input type="text" x-model="filters.location" placeholder="Location (e.g., India)"
+               class="border border-gray-300 rounded px-4 py-2" />
+        <input type="text" x-model="filters.title" placeholder="Job Title (e.g., Software Engineer)"
+               class="border border-gray-300 rounded px-4 py-2" />
+      </div>
+    </div>
+
+    <!-- Steps -->
+    <div class="bg-white p-4 rounded-lg shadow space-y-4">
+      <h2 class="text-lg font-semibold">Steps</h2>
+      <template x-for="(step, index) in steps" :key="index">
+        <div class="border p-3 rounded flex flex-col space-y-2">
+          <div class="flex justify-between items-center">
+            <select x-model="step.type" class="border px-2 py-1 rounded">
+              <option value="connect">Connect</option>
+              <option value="like">Like</option>
+              <option value="comment">Comment</option>
+              <option value="message">Message</option>
+            </select>
+            <button @click="removeStep(index)" class="text-red-500 hover:underline text-sm">Remove</button>
+          </div>
+          <div x-show="step.type === 'message'">
+            <textarea x-model="step.message" placeholder="Enter your message or prompt..."
+                      class="border px-3 py-2 rounded w-full"></textarea>
+            <label class="inline-flex items-center mt-2">
+              <input type="checkbox" x-model="step.use_ai" class="mr-2">
+              <span class="text-sm text-gray-600">Generate message with AI</span>
+            </label>
+          </div>
+        </div>
+      </template>
+      <button @click="addStep" class="px-4 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700">
+        ➕ Add Step
       </button>
     </div>
 
-    <!-- Sequences List -->
-    <div class="bg-white shadow border border-gray-200 rounded-lg overflow-x-auto">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 bg-white">
-          <template x-for="seq in sequences" :key="seq.id">
-            <tr>
-              <td class="px-6 py-4 text-sm font-medium" x-text="seq.name"></td>
-              <td class="px-6 py-4 text-sm" x-text="seq.status"></td>
-              <td class="px-6 py-4 text-sm text-gray-500" x-text="seq.created_at"></td>
-              <td class="px-6 py-4 text-sm">
-                <button @click="editSequence(seq)" class="text-blue-600 hover:underline">Edit</button>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Add Modal -->
-    <div x-show="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg p-6 w-full max-w-xl space-y-4">
-        <h2 class="text-xl font-semibold">Create New Sequence</h2>
-
-        <input type="text" x-model="newSequence.name" placeholder="Sequence Name" class="w-full border px-4 py-2 rounded" />
-
-        <textarea x-model="newSequence.filters" placeholder="Enter filter JSON (e.g. {\"title\":\"HR\"})" class="w-full border px-4 py-2 rounded"></textarea>
-
-        <textarea x-model="newSequence.steps" placeholder="Steps (connect, like, comment, message) in order" class="w-full border px-4 py-2 rounded"></textarea>
-
-        <input type="number" x-model="newSequence.interval" placeholder="Interval between steps (in minutes)" class="w-full border px-4 py-2 rounded" />
-
-        <div class="flex justify-end gap-2">
-          <button @click="showAddModal = false" class="px-4 py-2 bg-gray-200 rounded">Cancel</button>
-          <button @click="saveSequence" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
-        </div>
-      </div>
+    <!-- Submit -->
+    <div class="text-right">
+      <button @click="submitSequence"
+              class="bg-green-600 hover:bg-green-700 text-white font-semibold px-6 py-2 rounded shadow">
+        ✅ Create Sequence
+      </button>
     </div>
   </div>
 
   <script>
-    function sequencesPage() {
+    function sequencePage() {
       return {
-        uid: '',
-        userId: '',
-        sequences: [],
-        showAddModal: false,
-        newSequence: {
-          name: '',
-          filters: '',
-          steps: '',
-          interval: 30
+        filters: {
+          location: '',
+          title: ''
         },
+        steps: [],
 
-        initPage() {
-          const params = new URLSearchParams(window.location.search);
-          this.uid = params.get("uid") || '';
-          this.userId = params.get("user_id") || '';
-          this.loadSequences();
+        addStep() {
+          this.steps.push({ type: 'connect', message: '', use_ai: false });
         },
-
-        async loadSequences() {
-          const res = await fetch(`https://n8n.sapidblue.in/webhook/get-sequences?uid=${this.uid}&user_id=${this.userId}`);
-          this.sequences = await res.json();
+        removeStep(index) {
+          this.steps.splice(index, 1);
         },
-
-        async saveSequence() {
+        async submitSequence() {
           const payload = {
-            uid: this.uid,
-            user_id: this.userId,
-            name: this.newSequence.name,
-            filters: this.newSequence.filters,
-            steps: this.newSequence.steps,
-            interval: this.newSequence.interval
+            filters: this.filters,
+            steps: this.steps
           };
+          console.log("Submitting Sequence:", payload);
 
-          await fetch('https://n8n.sapidblue.in/webhook/add-sequence', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          this.showAddModal = false;
-          this.newSequence = { name: '', filters: '', steps: '', interval: 30 };
-          this.loadSequences();
-        },
-
-        editSequence(seq) {
-          alert(`Edit flow coming soon for: ${seq.name}`);
+          // TODO: Replace with real endpoint
+          try {
+            const res = await fetch("https://n8n.sapidblue.in/webhook/create-sequence-entry", {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+            const result = await res.json();
+            alert("Sequence created successfully!");
+          } catch (e) {
+            alert("Failed to create sequence.");
+            console.error(e);
+          }
         }
       };
     }
