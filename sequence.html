@@ -12,7 +12,8 @@
     <div class="flex justify-between items-start">
       <div>
         <h1 class="text-3xl font-bold">Sequences</h1>
-        <a href="profile.html" class="text-sm text-blue-600 hover:underline mt-1 inline-block">
+        <!-- Back to profile with uid & user_id -->
+        <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline mt-1 inline-block">
           ← Back to Profile
         </a>
       </div>
@@ -31,7 +32,7 @@
             <div class="text-sm text-gray-600" x-text="'Created: ' + new Date(seq.created_at).toLocaleString()"></div>
           </div>
           <div class="flex items-center gap-4">
-            <a :href="`sequence-view.html?id=${seq.id}`" class="text-sm text-blue-600 hover:underline">View</a>
+            <a :href="`sequence-view.html?id=${seq.id}&uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline">View</a>
             <label class="flex items-center cursor-pointer">
               <div class="relative">
                 <input type="checkbox" class="sr-only" :checked="seq.status === 'running'" @change="toggleSequence(seq.id)" />
@@ -125,6 +126,8 @@
       const userId = new URLSearchParams(window.location.search).get("user_id");
 
       return {
+        uid,
+        userId,
         sequences: [],
         showBuilder: false,
         locationOptions: [],
