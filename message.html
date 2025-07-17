@@ -43,10 +43,10 @@
 
       <!-- Messages -->
       <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-        <template x-for="msg in chatMessages" :key="msg.id">
-          <div class="max-w-lg" :class="msg.direction === 'outgoing' ? 'ml-auto text-right' : 'mr-auto text-left'">
+        <template x-for="msg in chatMessages" :key="msg.message_id || msg.id">
+          <div class="max-w-lg" :class="msg.direction === 'outgoing' || msg.sender === 'me' ? 'ml-auto text-right' : 'mr-auto text-left'">
             <div class="inline-block px-4 py-2 rounded-lg"
-                 :class="msg.direction === 'outgoing' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'">
+                 :class="msg.direction === 'outgoing' || msg.sender === 'me' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-800'">
               <span x-text="msg.text"></span>
             </div>
             <div class="text-xs text-gray-400 mt-1" x-text="msg.timestamp"></div>
@@ -75,8 +75,9 @@
         selectedConnection: null,
         chatMessages: [],
         newMessage: '',
+        loading: false,
 
-        initPage() {
+        async initPage() {
           const params = new URLSearchParams(window.location.search);
           this.uid = params.get('uid');
           this.userId = params.get('user_id');
@@ -87,44 +88,71 @@
             return;
           }
 
-          // Dummy connections
-          this.people = [
-            {
-              connection_urn: 'urn:li:fsd_connection:1',
-              first_name: 'Alice',
-              last_name: 'Johnson',
-              profile_picture_url: 'https://via.placeholder.com/80',
-              headline: 'Software Engineer'
-            },
-            {
-              connection_urn: 'urn:li:fsd_connection:2',
-              first_name: 'Bob',
-              last_name: 'Smith',
-              profile_picture_url: 'https://via.placeholder.com/80',
-              headline: 'Product Manager'
-            }
-          ];
+          this.loading = true;
+          const response = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=0&limit=50`);
+          const data = await response.json();
+          this.people = Array.isArray(data) ? data : [];
+          this.loading = false;
         },
 
-        selectConnection(person) {
+        async selectConnection(person) {
           this.selectedConnection = person;
 
-          // Dummy chat messages
-          this.chatMessages = [
-            { id: 1, text: 'Hi there!', timestamp: '10:00 AM', direction: 'incoming' },
-            { id: 2, text: 'Hello!', timestamp: '10:01 AM', direction: 'outgoing' }
-          ];
+          // Step 1: Sync messages for the selected connection
+          try {
+            await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                account_id: this.uid,
+                user_id: this.userId,
+                member_id: person.member_id
+              })
+            });
+          } catch (err) {
+            console.error("Sync error:", err);
+          }
+
+          // Step 2: Fetch synced messages
+          await this.fetchMessages(person.connection_urn);
         },
 
-        sendMessage() {
-          if (!this.newMessage.trim()) return;
-          this.chatMessages.push({
-            id: Date.now(),
-            text: this.newMessage.trim(),
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            direction: 'outgoing'
-          });
-          this.newMessage = '';
+        async fetchMessages(connectionUrn) {
+          try {
+            const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(connectionUrn)}`);
+            const data = await res.json();
+            this.chatMessages = Array.isArray(data) ? data : [];
+          } catch (err) {
+            console.error("Fetch messages error:", err);
+            this.chatMessages = [];
+          }
+        },
+
+        async sendMessage() {
+          if (!this.newMessage.trim() || !this.selectedConnection) return;
+          const messageText = this.newMessage.trim();
+
+          try {
+            await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: this.uid,
+                user_id: this.userId,
+                connection_urn: this.selectedConnection.connection_urn,
+                message: messageText
+              })
+            });
+
+            this.chatMessages.push({
+              text: messageText,
+              sender: 'me',
+              timestamp: new Date().toLocaleString()
+            });
+            this.newMessage = '';
+          } catch (err) {
+            console.error("Send message error:", err);
+          }
         },
 
         clean(val) {
