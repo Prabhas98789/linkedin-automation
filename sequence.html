@@ -9,8 +9,13 @@
 </head>
 <body x-data="sequencePage()" x-init="fetchSequences(); fetchLocations()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
   <div class="max-w-5xl mx-auto space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-3xl font-bold">Sequences</h1>
+    <div class="flex justify-between items-start">
+      <div>
+        <h1 class="text-3xl font-bold">Sequences</h1>
+        <a href="profile.html" class="text-sm text-blue-600 hover:underline mt-1 inline-block">
+          ← Back to Profile
+        </a>
+      </div>
       <button @click="showBuilder = true" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
         + Create New Sequence
       </button>
@@ -21,25 +26,20 @@
       <template x-for="seq in sequences" :key="seq.id">
         <div class="p-4 border rounded shadow bg-white flex justify-between items-center">
           <div>
-            <div class="text-sm text-gray-600 font-medium" x-text="'Title: ' + (seq.title || '-')"></div>
-            <div class="font-semibold text-lg" x-text="seq.name"></div>
-            <div class="text-xs text-gray-500" x-text="'Created: ' + new Date(seq.created_at).toLocaleString()"></div>
+            <div class="font-semibold text-lg" x-text="seq.title"></div>
+            <div class="text-sm text-gray-600" x-text="'Name: ' + seq.name"></div>
+            <div class="text-sm text-gray-600" x-text="'Created: ' + new Date(seq.created_at).toLocaleString()"></div>
           </div>
-
           <div class="flex items-center gap-4">
-            <button
-              @click="() => window.location.href = 'sequence-view.html?sequence_id=' + seq.id"
-              class="text-blue-600 text-sm underline hover:text-blue-800"
-            >
-              View
-            </button>
-
-            <button
-              @click="toggleSequence(seq.id)"
-              class="px-4 py-1 rounded text-xs font-semibold"
-              :class="seq.status === 'running' ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-700'"
-              x-text="seq.status === 'running' ? 'ON' : 'OFF'"
-            ></button>
+            <a :href="`sequence-view.html?id=${seq.id}`" class="text-sm text-blue-600 hover:underline">View</a>
+            <label class="flex items-center cursor-pointer">
+              <div class="relative">
+                <input type="checkbox" class="sr-only" :checked="seq.status === 'running'" @change="toggleSequence(seq.id)" />
+                <div class="w-10 h-4 bg-gray-300 rounded-full shadow-inner"></div>
+                <div class="dot absolute w-6 h-6 bg-white border rounded-full top-[-6px] left-0 transition" :class="{'translate-x-full bg-green-500': seq.status === 'running'}"></div>
+              </div>
+              <span class="ml-2 text-sm">Active</span>
+            </label>
           </div>
         </div>
       </template>
