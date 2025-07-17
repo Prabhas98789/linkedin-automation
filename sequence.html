@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-50">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sequences</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body x-data="sequencesPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
+  <div class="max-w-6xl mx-auto space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+      <h1 class="text-3xl font-bold">Sequences</h1>
+      <button @click="showAddModal = true" class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 text-sm">
+        ➕ Add Sequence
+      </button>
+    </div>
+
+    <!-- Sequences List -->
+    <div class="bg-white shadow border border-gray-200 rounded-lg overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Created</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 bg-white">
+          <template x-for="seq in sequences" :key="seq.id">
+            <tr>
+              <td class="px-6 py-4 text-sm font-medium" x-text="seq.name"></td>
+              <td class="px-6 py-4 text-sm" x-text="seq.status"></td>
+              <td class="px-6 py-4 text-sm text-gray-500" x-text="seq.created_at"></td>
+              <td class="px-6 py-4 text-sm">
+                <button @click="editSequence(seq)" class="text-blue-600 hover:underline">Edit</button>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Add Modal -->
+    <div x-show="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg p-6 w-full max-w-xl space-y-4">
+        <h2 class="text-xl font-semibold">Create New Sequence</h2>
+
+        <input type="text" x-model="newSequence.name" placeholder="Sequence Name" class="w-full border px-4 py-2 rounded" />
+
+        <textarea x-model="newSequence.filters" placeholder="Enter filter JSON (e.g. {\"title\":\"HR\"})" class="w-full border px-4 py-2 rounded"></textarea>
+
+        <textarea x-model="newSequence.steps" placeholder="Steps (connect, like, comment, message) in order" class="w-full border px-4 py-2 rounded"></textarea>
+
+        <input type="number" x-model="newSequence.interval" placeholder="Interval between steps (in minutes)" class="w-full border px-4 py-2 rounded" />
+
+        <div class="flex justify-end gap-2">
+          <button @click="showAddModal = false" class="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+          <button @click="saveSequence" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function sequencesPage() {
+      return {
+        uid: '',
+        userId: '',
+        sequences: [],
+        showAddModal: false,
+        newSequence: {
+          name: '',
+          filters: '',
+          steps: '',
+          interval: 30
+        },
+
+        initPage() {
+          const params = new URLSearchParams(window.location.search);
+          this.uid = params.get("uid") || '';
+          this.userId = params.get("user_id") || '';
+          this.loadSequences();
+        },
+
+        async loadSequences() {
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/get-sequences?uid=${this.uid}&user_id=${this.userId}`);
+          this.sequences = await res.json();
+        },
+
+        async saveSequence() {
+          const payload = {
+            uid: this.uid,
+            user_id: this.userId,
+            name: this.newSequence.name,
+            filters: this.newSequence.filters,
+            steps: this.newSequence.steps,
+            interval: this.newSequence.interval
+          };
+
+          await fetch('https://n8n.sapidblue.in/webhook/add-sequence', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          this.showAddModal = false;
+          this.newSequence = { name: '', filters: '', steps: '', interval: 30 };
+          this.loadSequences();
+        },
+
+        editSequence(seq) {
+          alert(`Edit flow coming soon for: ${seq.name}`);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
