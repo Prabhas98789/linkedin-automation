@@ -15,7 +15,7 @@
       <ul>
         <template x-for="person in people" :key="person.connection_urn">
           <li @click="selectConnection(person)" class="cursor-pointer hover:bg-gray-100 px-4 py-3 flex items-center gap-3"
-              :class="{ 'bg-gray-200': selectedConnection.connection_urn === person.connection_urn }">
+              :class="{ 'bg-gray-200': selectedConnection?.connection_urn === person.connection_urn }">
             <img :src="clean(person.profile_picture_url)" class="w-8 h-8 rounded-full object-cover" />
             <span x-text="`${clean(person.first_name)} ${clean(person.last_name)}`" class="text-sm font-medium"></span>
           </li>
@@ -35,6 +35,9 @@
               <div class="text-sm text-gray-500" x-text="clean(selectedConnection.headline)"></div>
             </div>
           </div>
+        </template>
+        <template x-if="!selectedConnection">
+          <div class="text-gray-400 text-sm">Select a connection to start chatting</div>
         </template>
       </div>
 
@@ -68,7 +71,6 @@
       return {
         uid: '',
         userId: '',
-        connectionUrn: '',
         people: [],
         selectedConnection: null,
         chatMessages: [],
@@ -78,15 +80,14 @@
           const params = new URLSearchParams(window.location.search);
           this.uid = params.get('uid') || '';
           this.userId = params.get('user_id') || '';
-          this.connectionUrn = params.get('connection_urn') || '';
 
-          // Redirect if required values are missing
-          if (!this.uid || !this.userId || !this.connectionUrn) {
+          // Redirect only if uid or userId is missing
+          if (!this.uid || !this.userId) {
             window.location.href = 'auth.html';
             return;
           }
 
-          // Load connections (dummy example)
+          // Load sample/dummy people
           this.people = [
             {
               connection_urn: 'urn:li:fsd_connection:1',
@@ -103,10 +104,6 @@
               headline: 'Product Manager'
             }
           ];
-
-          // Preselect connection
-          const found = this.people.find(p => p.connection_urn === this.connectionUrn);
-          if (found) this.selectConnection(found);
         },
 
         selectConnection(person) {
