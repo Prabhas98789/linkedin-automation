@@ -21,25 +21,28 @@
       <template x-for="seq in sequences" :key="seq.id">
         <div class="p-4 border rounded shadow bg-white flex justify-between items-center">
           <div>
+            <div class="text-sm text-gray-600 font-medium" x-text="'Title: ' + (seq.title || '-')"></div>
             <div class="font-semibold text-lg" x-text="seq.name"></div>
-            <div class="text-sm text-gray-600" x-text="'Steps: ' + seq.steps.length"></div>
+            <div class="text-xs text-gray-500" x-text="'Created: ' + new Date(seq.created_at).toLocaleString()"></div>
           </div>
+
           <div class="flex items-center gap-4">
-            <label class="flex items-center text-sm">
-              <input
-                type="checkbox"
-                :checked="seq.status === 'running'"
-                @change="toggleSequence(seq.id)"
-                class="mr-2"
-              />
-              Active
-            </label>
             <button
               @click="viewSequence(seq)"
               class="text-blue-600 text-sm underline hover:text-blue-800"
             >
               View
             </button>
+
+            <label class="flex items-center text-sm">
+              <input
+                type="checkbox"
+                :checked="seq.status === 'running'"
+                @change="() => toggleSequence(seq.id)"
+                class="mr-2"
+              />
+              Active
+            </label>
           </div>
         </div>
       </template>
@@ -194,8 +197,7 @@
         },
 
         viewSequence(seq) {
-          alert(`Viewing Sequence: ${seq.name}\nSteps: ${seq.steps.length}`);
-          // Future: window.location.href = `/view-sequence.html?id=${seq.id}`;
+          alert(`Sequence Details:\n\nName: ${seq.name}\nTitle: ${seq.title}\nCreated: ${new Date(seq.created_at).toLocaleString()}`);
         },
 
         async submitSequence() {
