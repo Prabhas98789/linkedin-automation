@@ -218,30 +218,31 @@
       },
 
         async fetchAIMode() {
-        try {
-          const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              uid: this.uid,
-              user_id: this.userId,
-              member_id: this.selectedConnection?.member_id
-            })
-          });
-      
-          const data = await res.json();
-      
-          // ✅ Accept both boolean or numeric/string values
-          if (data.ai_mode === true || data.ai_mode === 1 || data.ai_mode === "1") {
-            this.aiMode = true;
-          } else {
+          try {
+            const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: this.uid,
+                user_id: this.userId,
+                member_id: this.selectedConnection?.member_id
+              })
+            });
+        
+            const data = await res.json();
+            const item = Array.isArray(data) ? data[0] : data;
+        
+            // ✅ Accept both boolean or numeric/string values
+            if (item.ai_mode === true || item.ai_mode === 1 || item.ai_mode === "1") {
+              this.aiMode = true;
+            } else {
+              this.aiMode = false;
+            }
+          } catch (err) {
+            console.error("Fetch AI mode failed:", err);
             this.aiMode = false;
           }
-        } catch (err) {
-          console.error("Fetch AI mode failed:", err);
-          this.aiMode = false;
-        }
-      },
+        },
 
 
       async sendMessage() {
