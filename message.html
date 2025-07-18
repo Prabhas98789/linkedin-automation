@@ -9,7 +9,6 @@
 </head>
 <body x-data="messagePage()" x-init="initPage()" class="min-h-screen text-gray-800 font-sans">
   <div class="flex h-screen">
-    
     <!-- Sidebar -->
     <div class="w-1/4 border-r border-gray-200 bg-white overflow-y-auto flex flex-col">
       <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 text-sm px-4 pt-3 hover:underline">
@@ -73,8 +72,7 @@
         <label class="flex items-center cursor-pointer gap-2">
           <input type="checkbox" x-model="aiMode" @change="toggleAIMode" class="sr-only" />
           <div class="w-10 h-5 bg-gray-300 rounded-full shadow-inner" :class="aiMode ? 'bg-green-500' : 'bg-gray-300'">
-            <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out"
-                 :class="aiMode ? 'translate-x-5' : 'translate-x-1'"></div>
+            <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out" :class="aiMode ? 'translate-x-5' : 'translate-x-1'"></div>
           </div>
           <span class="text-sm font-medium text-gray-700">AI Mode</span>
         </label>
@@ -92,18 +90,12 @@
 
   <script>
     function escapeHtml(unsafe) {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     function messagePage() {
       return {
-        uid: '', userId: '',
-        people: [], paginatedPeople: [], searchText: '',
+        uid: '', userId: '', people: [], paginatedPeople: [], searchText: '',
         currentPage: 1, itemsPerPage: 10, totalPages: 1,
         selectedConnection: null, chatMessages: [], newMessage: '',
         aiMode: false,
@@ -148,7 +140,7 @@
             this.currentPage = page;
 
             if (this.paginatedPeople.length > 0) {
-              await this.selectConnection(this.paginatedPeople[0]); // Auto-select first
+              await this.selectConnection(this.paginatedPeople[0]);
             }
 
           } catch (err) {
@@ -178,25 +170,32 @@
 
         async sendMessage() {
           if (!this.newMessage.trim() || !this.selectedConnection) return;
+
           const messageText = escapeHtml(this.newMessage.trim());
-          await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn, message: messageText })
-          });
-          this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toLocaleString() });
+
+          // Push optimistically
+          this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toISOString() });
           this.newMessage = '';
+
+          try {
+            const res = await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn, message: messageText })
+            });
+            const result = await res.json();
+            if (result?.success) {
+              await this.fetchMessages(this.selectedConnection.connection_urn);
+            }
+          } catch (err) {
+            console.error("Send message error:", err);
+          }
         },
 
         async toggleAIMode() {
           try {
             const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                uid: this.uid,
-                user_id: this.userId,
-                ai_mode: this.aiMode
-              })
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: this.uid, user_id: this.userId, ai_mode: this.aiMode })
             });
             const data = await res.json();
             if (typeof data.ai_mode === 'boolean') {
@@ -210,13 +209,8 @@
         async askAI() {
           try {
             const res = await fetch('https://n8n.sapidblue.in/webhook/ask-ai-api', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                uid: this.uid,
-                user_id: this.userId,
-                connection_urn: this.selectedConnection?.connection_urn
-              })
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection?.connection_urn })
             });
             const data = await res.json();
             if (data?.suggestion) {
