@@ -11,9 +11,7 @@
   <div class="flex h-screen">
     <!-- Sidebar -->
     <div class="w-1/4 border-r border-gray-200 bg-white overflow-y-auto flex flex-col">
-      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 text-sm px-4 pt-3 hover:underline">
-        ← Back to Profile
-      </a>
+      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-blue-600 text-sm px-4 pt-3 hover:underline">← Back to Profile</a>
       <h2 class="text-xl font-semibold p-4 border-b">Connections</h2>
       <div class="px-4 pb-2">
         <input type="text" x-model="searchText" @keydown.enter="applyFilter" placeholder="Search..." class="w-full px-3 py-2 border rounded text-sm" />
@@ -40,20 +38,30 @@
 
     <!-- Chat Panel -->
     <div class="flex-1 flex flex-col">
-      <div class="px-6 py-4 border-b flex items-center gap-4 bg-white">
-        <template x-if="selectedConnection">
-          <div class="flex items-center gap-4">
-            <img :src="clean(selectedConnection.profile_picture_url)" class="w-10 h-10 rounded-full object-cover" />
-            <div>
-              <div class="text-lg font-semibold" x-text="`${clean(selectedConnection.first_name)} ${clean(selectedConnection.last_name)}`"></div>
-              <div class="text-sm text-gray-500" x-text="clean(selectedConnection.headline)"></div>
+      <div class="px-6 py-4 border-b flex items-center justify-between bg-white">
+        <div class="flex items-center gap-4">
+          <template x-if="selectedConnection">
+            <div class="flex items-center gap-4">
+              <img :src="clean(selectedConnection.profile_picture_url)" class="w-10 h-10 rounded-full object-cover" />
+              <div>
+                <div class="text-lg font-semibold" x-text="`${clean(selectedConnection.first_name)} ${clean(selectedConnection.last_name)}`"></div>
+                <div class="text-sm text-gray-500" x-text="clean(selectedConnection.headline)"></div>
+              </div>
             </div>
-          </div>
-        </template>
-        <template x-if="!selectedConnection">
-          <div class="text-gray-400 text-sm">Select a connection to start chatting</div>
-        </template>
+          </template>
+          <template x-if="!selectedConnection">
+            <div class="text-gray-400 text-sm">Select a connection to start chatting</div>
+          </template>
+        </div>
+        <div class="flex items-center gap-4">
+          <label class="flex items-center gap-2 text-sm">
+            <input type="checkbox" x-model="aiMode" class="form-checkbox" />
+            AI Mode
+          </label>
+          <button @click="askAI" class="bg-blue-600 text-white text-sm px-3 py-1 rounded hover:bg-blue-700">Ask AI</button>
+        </div>
       </div>
+
       <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
         <template x-for="msg in chatMessages" :key="msg.message_id || msg.id">
           <div class="max-w-lg" :class="msg.is_sender ? 'ml-auto text-right' : 'mr-auto text-left'">
@@ -64,6 +72,7 @@
           </div>
         </template>
       </div>
+
       <div class="p-4 border-t bg-white flex gap-2">
         <input x-model="newMessage" @keydown.enter="sendMessage" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2 border rounded-lg text-sm" />
         <button @click="sendMessage" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm">Send</button>
@@ -73,17 +82,12 @@
 
   <script>
     function escapeHtml(unsafe) {
-      return unsafe
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+      return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
     function messagePage() {
       return {
-        uid: '', userId: '',
+        uid: '', userId: '', aiMode: false,
         people: [], paginatedPeople: [], searchText: '',
         currentPage: 1, itemsPerPage: 10, totalPages: 1,
         selectedConnection: null, chatMessages: [], newMessage: '',
@@ -92,48 +96,34 @@
           const params = new URLSearchParams(window.location.search);
           this.uid = params.get('uid');
           this.userId = params.get('user_id');
-          if (!this.uid || !this.userId) {
-            alert('Missing uid or user_id. Redirecting...');
-            window.location.href = 'auth.html';
-            return;
-          }
+          if (!this.uid || !this.userId) return alert('Missing uid or user_id'), window.location.href = 'auth.html';
           await this.fetchConnections(1);
+          if (this.paginatedPeople.length > 0) this.selectConnection(this.paginatedPeople[0]);
         },
 
         async fetchConnections(page = 1) {
-          const seen = new Set();
-          const cleaned = [];
-          const desired = this.itemsPerPage;
+          const seen = new Set(); const cleaned = []; const desired = this.itemsPerPage;
           let offset = (page - 1) * desired;
-          try {
-            while (cleaned.length < desired) {
-              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
-              const res = await fetch(url);
-              const data = await res.json();
-              if (!Array.isArray(data) || data.length === 0) break;
-              for (const item of data) {
-                const obj = this.cleanObject(item);
-                if (!seen.has(obj.member_id)) {
-                  seen.add(obj.member_id);
-                  cleaned.push(obj);
-                }
-                if (cleaned.length >= desired) break;
-              }
-              offset += desired + 10;
+          while (cleaned.length < desired) {
+            const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
+            const res = await fetch(url); const data = await res.json();
+            if (!Array.isArray(data) || data.length === 0) break;
+            for (const item of data) {
+              const obj = this.cleanObject(item);
+              if (!seen.has(obj.member_id)) seen.add(obj.member_id), cleaned.push(obj);
+              if (cleaned.length >= desired) break;
             }
-            this.paginatedPeople = cleaned;
-            this.people = cleaned;
-            const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
-            this.totalPages = Math.max(1, Math.ceil(total / desired));
-            this.currentPage = page;
-          } catch (err) {
-            console.error("Connection fetch error:", err);
+            offset += desired + 10;
           }
+          this.paginatedPeople = cleaned; this.people = cleaned;
+          const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
+          this.totalPages = Math.max(1, Math.ceil(total / desired));
+          this.currentPage = page;
         },
 
         async selectConnection(person) {
           this.selectedConnection = person;
-          await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
+          await fetch('https://n8n.sapidblue.in/webhook/message-sync-user', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ account_id: this.uid, user_id: this.userId, member_id: person.member_id })
           });
@@ -146,25 +136,41 @@
             const data = await res.json();
             this.chatMessages = Array.isArray(data) ? data : [];
           } catch (err) {
-            console.error("Fetch messages error:", err);
-            this.chatMessages = [];
+            this.chatMessages = []; console.error("Fetch messages error:", err);
           }
         },
 
         async sendMessage() {
           if (!this.newMessage.trim() || !this.selectedConnection) return;
           const messageText = escapeHtml(this.newMessage.trim());
-          await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
+          await fetch('https://n8n.sapidblue.in/webhook/send-message-go', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn, message: messageText })
           });
-          this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toLocaleString() });
+          this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toISOString() });
+          if (this.aiMode) this.triggerAutoReply();
           this.newMessage = '';
+        },
+
+        async triggerAutoReply() {
+          await fetch('https://n8n.sapidblue.in/webhook/auto-reply-api', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn })
+          });
+        },
+
+        async askAI() {
+          const res = await fetch('https://n8n.sapidblue.in/webhook/ask-ai-api', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn })
+          });
+          const data = await res.json();
+          if (data?.suggestion) this.newMessage = data.suggestion;
         },
 
         applyFilter() { this.fetchConnections(1); },
         clearFilter() { this.searchText = ''; this.fetchConnections(1); },
-        goToPage(page) { if (page >= 1 && page <= this.totalPages) this.fetchConnections(page); },
+        goToPage(p) { if (p >= 1 && p <= this.totalPages) this.fetchConnections(p); },
         pagesToShow() {
           const pages = [], range = 2;
           if (this.totalPages <= 7) return Array.from({ length: this.totalPages }, (_, i) => i + 1);
@@ -176,8 +182,8 @@
           pages.push(this.totalPages);
           return pages;
         },
-        clean(val) { return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || ''); },
-        cleanObject(obj) { const result = {}; for (const key in obj) result[key] = this.clean(obj[key]); return result; }
+        clean(v) { return typeof v === 'string' ? v.replace(/^"+|"+$/g, '').trim() : (v || ''); },
+        cleanObject(o) { const r = {}; for (const k in o) r[k] = this.clean(o[k]); return r; }
       };
     }
   </script>
