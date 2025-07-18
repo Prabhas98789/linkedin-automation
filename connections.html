@@ -85,7 +85,7 @@
     </div>
   </div>
 
-   <!-- Sidebar Modal -->
+  <!-- Sidebar Modal -->
   <div x-show="showMessageSidebar" x-transition class="fixed inset-0 z-50 flex" style="display: none">
     <div class="flex-1 bg-black bg-opacity-30" @click="closeSidebar()"></div>
     <div class="w-full sm:w-1/2 md:w-1/3 bg-white shadow-xl h-full p-4 overflow-y-auto">
@@ -100,7 +100,7 @@
         <button @click="askAI" class="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Ask AI</button>
       </div>
       <div class="space-y-2 mb-4 max-h-[60vh] overflow-y-auto">
-        <template x-for="msg in chatMessages" :key="msg.message_id">
+        <template x-for="msg in chatMessages" :key="msg.message_id || msg.timestamp">
           <div class="p-2 rounded border" :class="msg.sender === 'me' ? 'bg-blue-100 text-right' : (msg.sender === 'ai' ? 'bg-purple-100 text-left' : 'bg-gray-100 text-left')">
             <p class="text-sm" x-text="msg.text"></p>
             <p class="text-xs text-gray-500 mt-1" x-text="msg.timestamp"></p>
@@ -204,8 +204,19 @@
         },
 
         async fetchMessages() {
-          const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(this.selectedConnectionUrn)}`);
-          this.chatMessages = await res.json();
+          try {
+            const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(this.selectedConnectionUrn)}`);
+            const rawMessages = await res.json();
+            this.chatMessages = rawMessages.map(m => ({
+              message_id: m.id,
+              text: m.text,
+              sender: m.is_sender == 1 ? 'me' : 'other',
+              timestamp: m.timestamp || new Date().toLocaleString()
+            }));
+          } catch (err) {
+            console.error("Error loading messages:", err);
+            this.chatMessages = [];
+          }
         },
 
         async sendMessage() {
