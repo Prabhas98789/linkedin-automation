@@ -93,14 +93,16 @@
         <h2 class="text-lg font-semibold">Chat with <span x-text="selectedConnectionName"></span></h2>
         <button @click="closeSidebar()" class="text-gray-500 hover:text-red-600 text-xl">&times;</button>
       </div>
+      
       <div class="flex items-center justify-between pb-2 mb-2 border-b">
-        <label class="flex items-center cursor-pointer gap-2">
-          <input type="checkbox" x-model="aiMode" @change="toggleAIMode" class="sr-only" />
-          <div class="w-10 h-5 bg-gray-300 rounded-full shadow-inner" :class="aiMode ? 'bg-green-500' : 'bg-gray-300'">
-            <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out" :class="aiMode ? 'translate-x-5' : 'translate-x-1'"></div>
-          </div>
-          <span class="text-sm font-medium text-gray-700">AI Mode</span>
-        </label>
+      <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
+        <input type="checkbox"
+               :checked="aiMode"
+               @change="aiMode = $event.target.checked; toggleAIMode()"
+               class="form-checkbox h-4 w-4 text-blue-600" />
+        Enable AI Mode
+      </label>
+
 
         <button @click="askAI" :disabled="loadingAI" class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 min-w-[80px] justify-center">
           <template x-if="!loadingAI"><span>Ask AI</span></template>
@@ -204,11 +206,16 @@
         },
 
         openMessageSidebar(conn) {
-          this.selectedConnectionUrn = conn.connection_urn;
-          this.selectedConnectionName = `${this.clean(conn.first_name)} ${this.clean(conn.last_name)}`;
-          this.showMessageSidebar = true;
-          this.$nextTick(() => this.fetchMessages());
+        this.selectedConnectionUrn = conn.connection_urn;
+        this.selectedConnectionName = `${this.clean(conn.first_name)} ${this.clean(conn.last_name)}`;
+        this.selectedMemberId = conn.member_id; // ✅ Needed for AI toggle
+        this.showMessageSidebar = true;
+        this.$nextTick(() => {
+          this.fetchMessages();
+          this.fetchAIMode(); // ✅ Add this to sync checkbox state
+          });
         },
+
 
         closeSidebar() {
           this.showMessageSidebar = false;
@@ -216,21 +223,32 @@
           this.newMessage = '';
         },
 
-        async fetchMessages() {
-          try {
-            const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(this.selectedConnectionUrn)}`);
-            const rawMessages = await res.json();
-            this.chatMessages = rawMessages.map(m => ({
-              message_id: m.id,
-              text: m.text,
-              sender: m.is_sender == 1 ? 'me' : 'other',
-              timestamp: m.timestamp || new Date().toLocaleString()
-            }));
-          } catch (err) {
-            console.error("Error loading messages:", err);
-            this.chatMessages = [];
+        async fetchAIMode() {
+        try {
+          const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: this.uid,
+              user_id: this.userId,
+              member_id: this.selectedMemberId
+            })
+          });
+      
+          const data = await res.json();
+          const item = Array.isArray(data) ? data[0] : data;
+      
+          if (item.ai_mode === true || item.ai_mode === 1 || item.ai_mode === "1") {
+            this.aiMode = true;
+          } else {
+            this.aiMode = false;
           }
-        },
+        } catch (err) {
+          console.error("Fetch AI mode failed:", err);
+          this.aiMode = false;
+        }
+      },
+
 
         async sendMessage() {
           if (!this.newMessage.trim()) return;
@@ -262,20 +280,27 @@
           }
         },
 
-        async toggleAIMode() {
-          try {
-            const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: this.uid, user_id: this.userId, ai_mode: this.aiMode })
-            });
-            const data = await res.json();
-            if (typeof data.ai_mode === 'boolean') {
-              this.aiMode = data.ai_mode;
-            }
-          } catch (err) {
-            console.error("AI Mode toggle failed:", err);
-          }
+           async toggleAIMode() {
+      try {
+        const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            uid: this.uid,
+            user_id: this.userId,
+            member_id: this.selectedMemberId,
+            ai_mode: this.aiMode
+          })
+        });
+        const data = await res.json();
+        if ('ai_mode' in data) {
+          this.aiMode = Boolean(Number(data.ai_mode));
         }
+      } catch (err) {
+        console.error("AI Mode toggle failed:", err);
+      }
+    }
+
       };
     }
   </script>
