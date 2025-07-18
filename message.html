@@ -11,16 +11,19 @@
   <div class="flex h-screen">
     
     <!-- Sidebar -->
-    <div class="w-1/4 border-r border-gray-200 bg-white overflow-y-auto">
+    <div class="w-1/4 border-r border-gray-200 bg-white overflow-y-auto flex flex-col">
       <h2 class="text-xl font-semibold p-4 border-b">Connections</h2>
 
       <!-- Search Input -->
       <div class="px-4 pb-2">
-        <input type="text" x-model="searchText" placeholder="Search..." class="w-full px-3 py-2 border rounded text-sm" />
+        <input type="text" x-model="searchText" @keydown.enter="applyFilter" placeholder="Search..." class="w-full px-3 py-2 border rounded text-sm" />
+        <button @click="applyFilter" class="mt-2 text-sm text-blue-600 hover:underline">Search</button>
+        <button @click="clearFilter" class="mt-1 text-xs text-gray-400 hover:underline">Clear</button>
       </div>
 
-      <ul>
-        <template x-for="person in filteredPeople" :key="person.connection_urn">
+      <!-- People List -->
+      <ul class="flex-1 overflow-y-auto">
+        <template x-for="person in paginatedPeople" :key="person.connection_urn">
           <li @click="selectConnection(person)" class="cursor-pointer hover:bg-gray-100 px-4 py-3 flex items-center gap-3"
               :class="{ 'bg-gray-200': selectedConnection?.connection_urn === person.connection_urn }">
             <img :src="clean(person.profile_picture_url)" class="w-8 h-8 rounded-full object-cover" />
@@ -28,11 +31,37 @@
           </li>
         </template>
       </ul>
+
+      <!-- Pagination Controls -->
+      <div class="px-4 py-3 flex flex-wrap justify-center gap-2" x-show="totalPages > 1">
+        <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1"
+                class="px-2 py-1 border rounded text-sm"
+                :class="currentPage === 1 ? 'bg-gray-200 text-gray-500' : 'bg-white hover:bg-gray-100'">
+          Prev
+        </button>
+
+        <template x-for="page in pagesToShow()" :key="page">
+          <template x-if="page === '...'">
+            <span class="px-2 py-1 text-gray-500">...</span>
+          </template>
+          <template x-if="page !== '...'">
+            <button @click="goToPage(page)" class="px-2 py-1 border rounded text-sm"
+                    :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white hover:bg-gray-100'">
+              <span x-text="page"></span>
+            </button>
+          </template>
+        </template>
+
+        <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages"
+                class="px-2 py-1 border rounded text-sm"
+                :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500' : 'bg-white hover:bg-gray-100'">
+          Next
+        </button>
+      </div>
     </div>
 
     <!-- Chat Panel -->
     <div class="flex-1 flex flex-col">
-      
       <!-- Header -->
       <div class="px-6 py-4 border-b flex items-center gap-4 bg-white">
         <template x-if="selectedConnection">
@@ -80,20 +109,15 @@
         uid: '',
         userId: '',
         people: [],
+        paginatedPeople: [],
         searchText: '',
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalPages: 1,
         selectedConnection: null,
         chatMessages: [],
         newMessage: '',
         loading: false,
-
-        get filteredPeople() {
-          if (!this.searchText.trim()) return this.people;
-          const term = this.searchText.toLowerCase();
-          return this.people.filter(p =>
-            (`${this.clean(p.first_name)} ${this.clean(p.last_name)}`.toLowerCase().includes(term) ||
-             (p.headline || '').toLowerCase().includes(term))
-          );
-        },
 
         async initPage() {
           const params = new URLSearchParams(window.location.search);
@@ -106,11 +130,78 @@
             return;
           }
 
+          await this.fetchConnections(1);
+        },
+
+        async fetchConnections(page = 1) {
           this.loading = true;
-          const response = await fetch(`https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=0&limit=50`);
-          const data = await response.json();
-          this.people = Array.isArray(data) ? data : [];
+          this.people = [];
+          this.paginatedPeople = [];
+
+          const seen = new Set();
+          const cleaned = [];
+          const desired = this.itemsPerPage;
+          let offset = (page - 1) * desired;
+          const maxRetries = 5;
+          let retries = 0;
+
+          try {
+            while (cleaned.length < desired && retries < maxRetries) {
+              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
+              const res = await fetch(url);
+              const data = await res.json();
+              if (!Array.isArray(data) || data.length === 0) break;
+
+              for (const item of data) {
+                const obj = this.cleanObject(item);
+                if (!seen.has(obj.member_id)) {
+                  seen.add(obj.member_id);
+                  cleaned.push(obj);
+                }
+                if (cleaned.length >= desired) break;
+              }
+              offset += desired + 10;
+              retries++;
+            }
+
+            this.paginatedPeople = cleaned;
+            this.people = cleaned;
+            const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
+            this.totalPages = Math.max(1, Math.ceil(total / desired));
+            this.currentPage = page;
+          } catch (err) {
+            console.error("Connection fetch error:", err);
+          }
           this.loading = false;
+        },
+
+        applyFilter() {
+          this.currentPage = 1;
+          this.fetchConnections(1);
+        },
+
+        clearFilter() {
+          this.searchText = '';
+          this.applyFilter();
+        },
+
+        goToPage(page) {
+          if (page < 1 || page > this.totalPages) return;
+          this.fetchConnections(page);
+        },
+
+        pagesToShow() {
+          const pages = [];
+          const range = 2;
+          if (this.totalPages <= 7) return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+          pages.push(1);
+          if (this.currentPage > range + 2) pages.push('...');
+          for (let i = this.currentPage - range; i <= this.currentPage + range; i++) {
+            if (i > 1 && i < this.totalPages) pages.push(i);
+          }
+          if (this.currentPage < this.totalPages - range - 1) pages.push('...');
+          pages.push(this.totalPages);
+          return pages;
         },
 
         async selectConnection(person) {
@@ -173,6 +264,12 @@
 
         clean(val) {
           return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || '');
+        },
+
+        cleanObject(obj) {
+          const result = {};
+          for (const key in obj) result[key] = this.clean(obj[key]);
+          return result;
         }
       };
     }
