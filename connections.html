@@ -9,26 +9,88 @@
 </head>
 <body x-data="connectionsPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
 
-  <!-- all existing HTML content is retained -->
+  <div class="max-w-6xl mx-auto space-y-6">
+    <div class="flex justify-between items-center mb-4">
+      <h1 class="text-3xl font-bold">Connections</h1>
+      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline">← Back to Profile</a>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <input type="text" placeholder="Search name/headline..." x-model="filterText" @keydown.enter="applyFilter"
+             class="px-4 py-2 border border-gray-300 rounded w-64" />
+      <button @click="applyFilter" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
+        Search
+      </button>
+      <button @click="clearFilter" class="text-sm text-gray-500 hover:underline">Clear</button>
+    </div>
+
+    <div class="text-sm text-gray-500 bg-yellow-100 px-4 py-2 rounded">
+      <span>Page: <strong x-text="currentPage"></strong></span> |
+      <span>Total Pages: <strong x-text="totalPages"></strong></span> |
+      <span>Loaded Connections: <strong x-text="paginatedConnections.length"></strong></span>
+    </div>
+
+    <div class="text-center" x-show="fetchFailed && !loading">
+      <p class="text-gray-500 mb-2">Failed to load connections.</p>
+      <button @click="fetchAllConnections(currentPage)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
+        Retry
+      </button>
+    </div>
+
+    <div class="text-center text-gray-500 py-10" x-show="loading">Loading connections...</div>
+
+    <div class="text-center text-gray-400 py-10" x-show="!loading && !fetchFailed && paginatedConnections.length === 0">
+      No connections found.
+    </div>
+
+    <div x-show="paginatedConnections.length > 0" class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-100">
+          <tr>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Photo</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Headline</th>
+            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 bg-white">
+          <template x-for="conn in paginatedConnections" :key="conn.connection_urn">
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4">
+                <img :src="clean(conn.profile_picture_url)" alt="Profile" class="w-10 h-10 rounded-full object-cover border" />
+              </td>
+              <td class="px-6 py-4 text-sm font-medium" x-text="`${clean(conn.first_name)} ${clean(conn.last_name)}`"></td>
+              <td class="px-6 py-4 text-sm text-gray-600" x-text="clean(conn.headline) || '—'"></td>
+              <td class="px-6 py-4 text-sm flex gap-3">
+                <a @click.prevent="openMessageSidebar(conn)" href="#" class="text-green-600 hover:underline">Message</a>
+                <a :href="clean(conn.public_profile_url)" class="text-blue-500 hover:underline" target="_blank">View</a>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="flex justify-center mt-6 flex-wrap gap-2" x-show="totalPages > 1">
+      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded text-sm shadow border" :class="currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'">
+        Previous
+      </button>
+      <template x-for="page in pagesToShow()" :key="page">
+        <template x-if="page === '...'"><span class="px-3 py-1 text-sm text-gray-500">...</span></template>
+        <template x-if="page !== '...'"><button @click="goToPage(page)" class="px-3 py-1 rounded text-sm shadow border" :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'"><span x-text="page"></span></button></template>
+      </template>
+      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded text-sm shadow border" :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'">
+        Next
+      </button>
+    </div>
+  </div>
 
   <script>
     function connectionsPage() {
       return {
-        uid: '',
-        userId: '',
-        filterText: '',
-        paginatedConnections: [],
-        loading: false,
-        fetchFailed: false,
-        currentPage: 1,
-        itemsPerPage: 10,
-        totalPages: 1,
-        showMessageSidebar: false,
-        selectedConnectionUrn: '',
-        selectedConnectionName: '',
-        chatMessages: [],
-        newMessage: '',
-        aiMode: false,
+        uid: '', userId: '', filterText: '', paginatedConnections: [], loading: false, fetchFailed: false, currentPage: 1,
+        itemsPerPage: 10, totalPages: 1, showMessageSidebar: false, selectedConnectionUrn: '', selectedConnectionName: '',
+        chatMessages: [], newMessage: '',
 
         initPage() {
           const params = new URLSearchParams(window.location.search);
@@ -81,6 +143,7 @@
 
         applyFilter() { this.currentPage = 1; this.fetchAllConnections(1); },
         clearFilter() { this.filterText = ''; this.applyFilter(); },
+
         goToPage(page) { if (page < 1 || page > this.totalPages) return; this.fetchAllConnections(page); },
         clean(val) { return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || ''); },
         cleanObject(obj) { const result = {}; for (const key in obj) result[key] = this.clean(obj[key]); return result; },
@@ -125,25 +188,8 @@
           });
           this.chatMessages.push({ text: this.newMessage, sender: 'me', timestamp: new Date().toLocaleString() });
           this.newMessage = '';
-        },
-
-        async askAI() {
-          if (!this.chatMessages.length) return;
-          const latestMsg = this.chatMessages[this.chatMessages.length - 1].text;
-          const res = await fetch(`https://n8n.sapidblue.in/webhook/ask-ai-message`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnectionUrn, message: latestMsg })
-          });
-          const data = await res.json();
-          this.chatMessages.push({ text: data.reply || 'AI did not respond.', sender: 'ai', timestamp: new Date().toLocaleString() });
-        },
-
-        toggleAIMode() {
-          // You can optionally send AI mode state to backend or just use it client-side
-          console.log("AI Mode toggled:", this.aiMode);
         }
-      }
+      };
     }
   </script>
 </body>
