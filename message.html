@@ -163,6 +163,7 @@
             body: JSON.stringify({ account_id: this.uid, user_id: this.userId, member_id: person.member_id })
           });
           await this.fetchMessages(person.connection_urn);
+          await this.fetchAIMode();
         },
 
         async fetchMessages(connectionUrn) {
@@ -176,12 +177,51 @@
           }
         },
 
+        async toggleAIMode() {
+          try {
+            const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: this.uid,
+                user_id: this.userId,
+                member_id: this.selectedConnection?.member_id,
+                ai_mode: this.aiMode
+              })
+            });
+            const data = await res.json();
+            if (typeof data.ai_mode === 'boolean') {
+              this.aiMode = data.ai_mode;
+            }
+          } catch (err) {
+            console.error("AI Mode toggle failed:", err);
+          }
+        },
+
+        async fetchAIMode() {
+          try {
+            const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                uid: this.uid,
+                user_id: this.userId,
+                member_id: this.selectedConnection?.member_id
+              })
+            });
+            const data = await res.json();
+            if (typeof data.ai_mode === 'boolean') {
+              this.aiMode = data.ai_mode;
+            }
+          } catch (err) {
+            console.error("Fetch AI mode failed:", err);
+            this.aiMode = false;
+          }
+        },
+
         async sendMessage() {
           if (!this.newMessage.trim() || !this.selectedConnection) return;
 
           const messageText = escapeHtml(this.newMessage.trim());
 
-          // Push optimistically
           this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toISOString() });
           this.newMessage = '';
 
@@ -196,21 +236,6 @@
             }
           } catch (err) {
             console.error("Send message error:", err);
-          }
-        },
-
-        async toggleAIMode() {
-          try {
-            const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: this.uid, user_id: this.userId, ai_mode: this.aiMode })
-            });
-            const data = await res.json();
-            if (typeof data.ai_mode === 'boolean') {
-              this.aiMode = data.ai_mode;
-            }
-          } catch (err) {
-            console.error("AI Mode toggle failed:", err);
           }
         },
 
