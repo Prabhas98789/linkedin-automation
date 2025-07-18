@@ -78,7 +78,7 @@
         </label>
 
         <button @click="askAI" :disabled="loadingAI" class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center gap-2 min-w-[80px] justify-center">
-          <template x-if="!loadingAI">Ask AI</template>
+          <template x-if="!loadingAI"><span>Ask AI</span></template>
           <template x-if="loadingAI">
             <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
