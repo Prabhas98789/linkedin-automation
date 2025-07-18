@@ -9,11 +9,18 @@
 </head>
 <body x-data="messagePage()" x-init="initPage()" class="min-h-screen text-gray-800 font-sans">
   <div class="flex h-screen">
+    
     <!-- Sidebar -->
     <div class="w-1/4 border-r border-gray-200 bg-white overflow-y-auto">
       <h2 class="text-xl font-semibold p-4 border-b">Connections</h2>
+
+      <!-- Search Input -->
+      <div class="px-4 pb-2">
+        <input type="text" x-model="searchText" placeholder="Search..." class="w-full px-3 py-2 border rounded text-sm" />
+      </div>
+
       <ul>
-        <template x-for="person in people" :key="person.connection_urn">
+        <template x-for="person in filteredPeople" :key="person.connection_urn">
           <li @click="selectConnection(person)" class="cursor-pointer hover:bg-gray-100 px-4 py-3 flex items-center gap-3"
               :class="{ 'bg-gray-200': selectedConnection?.connection_urn === person.connection_urn }">
             <img :src="clean(person.profile_picture_url)" class="w-8 h-8 rounded-full object-cover" />
@@ -25,6 +32,7 @@
 
     <!-- Chat Panel -->
     <div class="flex-1 flex flex-col">
+      
       <!-- Header -->
       <div class="px-6 py-4 border-b flex items-center gap-4 bg-white">
         <template x-if="selectedConnection">
@@ -72,10 +80,20 @@
         uid: '',
         userId: '',
         people: [],
+        searchText: '',
         selectedConnection: null,
         chatMessages: [],
         newMessage: '',
         loading: false,
+
+        get filteredPeople() {
+          if (!this.searchText.trim()) return this.people;
+          const term = this.searchText.toLowerCase();
+          return this.people.filter(p =>
+            (`${this.clean(p.first_name)} ${this.clean(p.last_name)}`.toLowerCase().includes(term) ||
+             (p.headline || '').toLowerCase().includes(term))
+          );
+        },
 
         async initPage() {
           const params = new URLSearchParams(window.location.search);
@@ -98,7 +116,6 @@
         async selectConnection(person) {
           this.selectedConnection = person;
 
-          // Step 1: Sync messages for the selected connection
           try {
             await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
               method: 'POST',
@@ -113,7 +130,6 @@
             console.error("Sync error:", err);
           }
 
-          // Step 2: Fetch synced messages
           await this.fetchMessages(person.connection_urn);
         },
 
