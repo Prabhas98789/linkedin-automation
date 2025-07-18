@@ -69,7 +69,7 @@
 
       <!-- AI Controls -->
 
-      <!-- AI Controls -->
+    <!-- AI Controls -->
       <div class="flex items-center justify-between p-4 bg-gray-50 border-t">
         <label class="flex items-center gap-2 text-sm font-medium text-gray-700">
           <input type="checkbox"
@@ -165,8 +165,12 @@
         }
       },
 
-      async selectConnection(person) {
+       async selectConnection(person) {
         this.selectedConnection = person;
+      
+        // ⛳ Always start with checkbox unticked until we know the correct state
+        this.aiMode = false;
+      
         await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -176,6 +180,7 @@
             member_id: person.member_id
           })
         });
+      
         await this.fetchMessages(person.connection_urn);
         await this.fetchAIMode();
       },
@@ -212,7 +217,7 @@
         }
       },
 
-      async fetchAIMode() {
+        async fetchAIMode() {
         try {
           const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
             method: 'POST',
@@ -223,15 +228,21 @@
               member_id: this.selectedConnection?.member_id
             })
           });
+      
           const data = await res.json();
-          if ('ai_mode' in data) {
-            this.aiMode = Boolean(Number(data.ai_mode));
+      
+          // ✅ Accept both boolean or numeric/string values
+          if (data.ai_mode === true || data.ai_mode === 1 || data.ai_mode === "1") {
+            this.aiMode = true;
+          } else {
+            this.aiMode = false;
           }
         } catch (err) {
           console.error("Fetch AI mode failed:", err);
           this.aiMode = false;
         }
       },
+
 
       async sendMessage() {
         if (!this.newMessage.trim() || !this.selectedConnection) return;
