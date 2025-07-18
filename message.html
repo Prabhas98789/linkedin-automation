@@ -97,184 +97,220 @@
   </div>
 
   <script>
-    function escapeHtml(unsafe) {
-      return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#039;");
-    }
+  function escapeHtml(unsafe) {
+    return unsafe.replace(/&/g, "&amp;")
+                 .replace(/</g, "&lt;")
+                 .replace(/>/g, "&gt;")
+                 .replace(/\"/g, "&quot;")
+                 .replace(/'/g, "&#039;");
+  }
 
-    function messagePage() {
-      return {
-        uid: '', userId: '', people: [], paginatedPeople: [], searchText: '',
-        currentPage: 1, itemsPerPage: 10, totalPages: 1,
-        selectedConnection: null, chatMessages: [], newMessage: '',
-        aiMode: false, loadingAI: false,
+  function messagePage() {
+    return {
+      uid: '', userId: '', people: [], paginatedPeople: [], searchText: '',
+      currentPage: 1, itemsPerPage: 10, totalPages: 1,
+      selectedConnection: null, chatMessages: [], newMessage: '',
+      aiMode: false, loadingAI: false,
 
-        async initPage() {
-          const params = new URLSearchParams(window.location.search);
-          this.uid = params.get('uid');
-          this.userId = params.get('user_id');
-          if (!this.uid || !this.userId) {
-            alert('Missing uid or user_id. Redirecting...');
-            window.location.href = 'auth.html';
-            return;
-          }
-          await this.fetchConnections(1);
-        },
+      async initPage() {
+        const params = new URLSearchParams(window.location.search);
+        this.uid = params.get('uid');
+        this.userId = params.get('user_id');
+        if (!this.uid || !this.userId) {
+          alert('Missing uid or user_id. Redirecting...');
+          window.location.href = 'auth.html';
+          return;
+        }
+        await this.fetchConnections(1);
+      },
 
-        async fetchConnections(page = 1) {
-          const seen = new Set();
-          const cleaned = [];
-          const desired = this.itemsPerPage;
-          let offset = (page - 1) * desired;
-          try {
-            while (cleaned.length < desired) {
-              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
-              const res = await fetch(url);
-              const data = await res.json();
-              if (!Array.isArray(data) || data.length === 0) break;
-              for (const item of data) {
-                const obj = this.cleanObject(item);
-                if (!seen.has(obj.member_id)) {
-                  seen.add(obj.member_id);
-                  cleaned.push(obj);
-                }
-                if (cleaned.length >= desired) break;
+      async fetchConnections(page = 1) {
+        const seen = new Set();
+        const cleaned = [];
+        const desired = this.itemsPerPage;
+        let offset = (page - 1) * desired;
+        try {
+          while (cleaned.length < desired) {
+            const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (!Array.isArray(data) || data.length === 0) break;
+            for (const item of data) {
+              const obj = this.cleanObject(item);
+              if (!seen.has(obj.member_id)) {
+                seen.add(obj.member_id);
+                cleaned.push(obj);
               }
-              offset += desired + 10;
+              if (cleaned.length >= desired) break;
             }
-            this.paginatedPeople = cleaned;
-            this.people = cleaned;
-            const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
-            this.totalPages = Math.max(1, Math.ceil(total / desired));
-            this.currentPage = page;
-
-            if (this.paginatedPeople.length > 0) {
-              await this.selectConnection(this.paginatedPeople[0]);
-            }
-
-          } catch (err) {
-            console.error("Connection fetch error:", err);
+            offset += desired + 10;
           }
-        },
+          this.paginatedPeople = cleaned;
+          this.people = cleaned;
+          const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
+          this.totalPages = Math.max(1, Math.ceil(total / desired));
+          this.currentPage = page;
 
-        async selectConnection(person) {
-          this.selectedConnection = person;
-          await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account_id: this.uid, user_id: this.userId, member_id: person.member_id })
+          if (this.paginatedPeople.length > 0) {
+            await this.selectConnection(this.paginatedPeople[0]);
+          }
+
+        } catch (err) {
+          console.error("Connection fetch error:", err);
+        }
+      },
+
+      async selectConnection(person) {
+        this.selectedConnection = person;
+        await fetch(`https://n8n.sapidblue.in/webhook/message-sync-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            account_id: this.uid,
+            user_id: this.userId,
+            member_id: person.member_id
+          })
+        });
+        await this.fetchMessages(person.connection_urn);
+        await this.fetchAIMode();
+      },
+
+      async fetchMessages(connectionUrn) {
+        try {
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(connectionUrn)}`);
+          const data = await res.json();
+          this.chatMessages = Array.isArray(data) ? data : [];
+        } catch (err) {
+          console.error("Fetch messages error:", err);
+          this.chatMessages = [];
+        }
+      },
+
+      async toggleAIMode() {
+        try {
+          const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: this.uid,
+              user_id: this.userId,
+              member_id: this.selectedConnection?.member_id,
+              ai_mode: this.aiMode
+            })
           });
-          await this.fetchMessages(person.connection_urn);
-          await this.fetchAIMode();
-        },
-
-        async fetchMessages(connectionUrn) {
-          try {
-            const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(connectionUrn)}`);
-            const data = await res.json();
-            this.chatMessages = Array.isArray(data) ? data : [];
-          } catch (err) {
-            console.error("Fetch messages error:", err);
-            this.chatMessages = [];
+          const data = await res.json();
+          if ('ai_mode' in data) {
+            this.aiMode = Boolean(Number(data.ai_mode));
           }
-        },
+        } catch (err) {
+          console.error("AI Mode toggle failed:", err);
+        }
+      },
 
-        async toggleAIMode() {
-          try {
-            const res = await fetch('https://n8n.sapidblue.in/webhook/update-ai-mode', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                uid: this.uid,
-                user_id: this.userId,
-                member_id: this.selectedConnection?.member_id,
-                ai_mode: this.aiMode
-              })
-            });
-            const data = await res.json();
-            if (typeof data.ai_mode === 'boolean') {
-              this.aiMode = data.ai_mode;
-            }
-          } catch (err) {
-            console.error("AI Mode toggle failed:", err);
+      async fetchAIMode() {
+        try {
+          const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: this.uid,
+              user_id: this.userId,
+              member_id: this.selectedConnection?.member_id
+            })
+          });
+          const data = await res.json();
+          if ('ai_mode' in data) {
+            this.aiMode = Boolean(Number(data.ai_mode));
           }
-        },
+        } catch (err) {
+          console.error("Fetch AI mode failed:", err);
+          this.aiMode = false;
+        }
+      },
 
-        async fetchAIMode() {
-          try {
-            const res = await fetch('https://n8n.sapidblue.in/webhook/get-ai-mode', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                uid: this.uid,
-                user_id: this.userId,
-                member_id: this.selectedConnection?.member_id
-              })
-            });
-            const data = await res.json();
-            if (typeof data.ai_mode === 'boolean') {
-              this.aiMode = data.ai_mode;
-            }
-          } catch (err) {
-            console.error("Fetch AI mode failed:", err);
-            this.aiMode = false;
+      async sendMessage() {
+        if (!this.newMessage.trim() || !this.selectedConnection) return;
+
+        const messageText = escapeHtml(this.newMessage.trim());
+        this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toISOString() });
+        this.newMessage = '';
+
+        try {
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: this.uid,
+              user_id: this.userId,
+              connection_urn: this.selectedConnection.connection_urn,
+              message: messageText
+            })
+          });
+          const result = await res.json();
+          if (result?.success) {
+            await this.fetchMessages(this.selectedConnection.connection_urn);
           }
-        },
+        } catch (err) {
+          console.error("Send message error:", err);
+        }
+      },
 
-        async sendMessage() {
-          if (!this.newMessage.trim() || !this.selectedConnection) return;
-
-          const messageText = escapeHtml(this.newMessage.trim());
-
-          this.chatMessages.push({ text: messageText, is_sender: true, timestamp: new Date().toISOString() });
-          this.newMessage = '';
-
-          try {
-            const res = await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection.connection_urn, message: messageText })
-            });
-            const result = await res.json();
-            if (result?.success) {
-              await this.fetchMessages(this.selectedConnection.connection_urn);
-            }
-          } catch (err) {
-            console.error("Send message error:", err);
+      async askAI() {
+        try {
+          this.loadingAI = true;
+          const res = await fetch('https://n8n.sapidblue.in/webhook/ask-ai-api', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              uid: this.uid,
+              user_id: this.userId,
+              connection_urn: this.selectedConnection?.connection_urn
+            })
+          });
+          const data = await res.json();
+          if (data?.suggestion) {
+            this.newMessage = data.suggestion;
           }
-        },
+        } catch (err) {
+          console.error("Ask AI failed:", err);
+        } finally {
+          this.loadingAI = false;
+        }
+      },
 
-        async askAI() {
-          try {
-            this.loadingAI = true;
-            const res = await fetch('https://n8n.sapidblue.in/webhook/ask-ai-api', {
-              method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnection?.connection_urn })
-            });
-            const data = await res.json();
-            if (data?.suggestion) {
-              this.newMessage = data.suggestion;
-            }
-          } catch (err) {
-            console.error("Ask AI failed:", err);
-          } finally {
-            this.loadingAI = false;
-          }
-        },
+      applyFilter() {
+        this.fetchConnections(1);
+      },
+      clearFilter() {
+        this.searchText = '';
+        this.fetchConnections(1);
+      },
+      goToPage(page) {
+        if (page >= 1 && page <= this.totalPages) this.fetchConnections(page);
+      },
+      pagesToShow() {
+        const pages = [], range = 2;
+        if (this.totalPages <= 7) return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+        pages.push(1);
+        if (this.currentPage > range + 2) pages.push('...');
+        for (let i = this.currentPage - range; i <= this.currentPage + range; i++) {
+          if (i > 1 && i < this.totalPages) pages.push(i);
+        }
+        if (this.currentPage < this.totalPages - range - 1) pages.push('...');
+        pages.push(this.totalPages);
+        return pages;
+      },
+      clean(val) {
+        return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || '');
+      },
+      cleanObject(obj) {
+        const result = {};
+        for (const key in obj) result[key] = this.clean(obj[key]);
+        return result;
+      }
+    };
+  }
+</script>
 
-        applyFilter() { this.fetchConnections(1); },
-        clearFilter() { this.searchText = ''; this.fetchConnections(1); },
-        goToPage(page) { if (page >= 1 && page <= this.totalPages) this.fetchConnections(page); },
-        pagesToShow() {
-          const pages = [], range = 2;
-          if (this.totalPages <= 7) return Array.from({ length: this.totalPages }, (_, i) => i + 1);
-          pages.push(1);
-          if (this.currentPage > range + 2) pages.push('...');
-          for (let i = this.currentPage - range; i <= this.currentPage + range; i++)
-            if (i > 1 && i < this.totalPages) pages.push(i);
-          if (this.currentPage < this.totalPages - range - 1) pages.push('...');
-          pages.push(this.totalPages);
-          return pages;
-        },
-        clean(val) { return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || ''); },
-        cleanObject(obj) { const result = {}; for (const key in obj) result[key] = this.clean(obj[key]); return result; }
-      };
-    }
-  </script>
 </body>
 </html>
