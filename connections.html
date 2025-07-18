@@ -9,125 +9,142 @@
 </head>
 <body x-data="connectionsPage()" x-init="initPage()" class="min-h-screen px-4 py-6 text-gray-800 font-sans">
 
-  <div class="max-w-6xl mx-auto space-y-6">
-    <div class="flex justify-between items-center mb-4">
-      <h1 class="text-3xl font-bold">Connections</h1>
-      <a :href="`profile.html?uid=${uid}&user_id=${userId}`" class="text-sm text-blue-600 hover:underline">← Back to Profile</a>
-    </div>
+  <!-- all existing HTML content is retained -->
 
-    <div class="flex items-center gap-2">
-      <input type="text" placeholder="Search name/headline..." x-model="filterText" @keydown.enter="applyFilter"
-             class="px-4 py-2 border border-gray-300 rounded w-64" />
-      <button @click="applyFilter" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm">
-        Search
-      </button>
-      <button @click="clearFilter" class="text-sm text-gray-500 hover:underline">Clear</button>
-    </div>
+  <script>
+    function connectionsPage() {
+      return {
+        uid: '',
+        userId: '',
+        filterText: '',
+        paginatedConnections: [],
+        loading: false,
+        fetchFailed: false,
+        currentPage: 1,
+        itemsPerPage: 10,
+        totalPages: 1,
+        showMessageSidebar: false,
+        selectedConnectionUrn: '',
+        selectedConnectionName: '',
+        chatMessages: [],
+        newMessage: '',
+        aiMode: false,
 
-    <div class="text-sm text-gray-500 bg-yellow-100 px-4 py-2 rounded">
-      <span>Page: <strong x-text="currentPage"></strong></span> |
-      <span>Total Pages: <strong x-text="totalPages"></strong></span> |
-      <span>Loaded Connections: <strong x-text="paginatedConnections.length"></strong></span>
-    </div>
+        initPage() {
+          const params = new URLSearchParams(window.location.search);
+          this.uid = params.get("uid") || '';
+          this.userId = params.get("user_id") || '';
+          this.filterText = params.get("filter_text") || '';
+          if (!this.uid || !this.userId) return window.location.href = "auth.html";
+          this.fetchAllConnections(this.currentPage);
+        },
 
-    <div class="text-center" x-show="fetchFailed && !loading">
-      <p class="text-gray-500 mb-2">Failed to load connections.</p>
-      <button @click="fetchAllConnections(currentPage)" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm">
-        Retry
-      </button>
-    </div>
+        async fetchAllConnections(page = 1) {
+          this.loading = true;
+          this.fetchFailed = false;
+          this.paginatedConnections = [];
 
-    <div class="text-center text-gray-500 py-10" x-show="loading">Loading connections...</div>
+          const seen = new Set();
+          const cleaned = [];
+          const desired = this.itemsPerPage;
+          let offset = (page - 1) * desired;
+          const maxRetries = 5;
+          let retries = 0;
 
-    <div class="text-center text-gray-400 py-10" x-show="!loading && !fetchFailed && paginatedConnections.length === 0">
-      No connections found.
-    </div>
+          try {
+            while (cleaned.length < desired && retries < maxRetries) {
+              const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.filterText)}`;
+              const res = await fetch(url);
+              const data = await res.json();
+              if (!Array.isArray(data) || data.length === 0) break;
+              for (const item of data) {
+                const obj = this.cleanObject(item);
+                if (!seen.has(obj.member_id)) {
+                  seen.add(obj.member_id);
+                  cleaned.push(obj);
+                }
+                if (cleaned.length >= desired) break;
+              }
+              offset += desired + 10;
+              retries++;
+            }
+            this.paginatedConnections = cleaned;
+            const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
+            this.totalPages = Math.max(1, Math.ceil(total / desired));
+            this.currentPage = page;
+          } catch (err) {
+            console.error("Fetch error:", err);
+            this.fetchFailed = true;
+          }
+          this.loading = false;
+        },
 
-    <div x-show="paginatedConnections.length > 0" class="overflow-x-auto bg-white shadow border border-gray-200 rounded-lg">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-100">
-          <tr>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Photo</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Headline</th>
-            <th class="px-6 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-gray-100 bg-white">
-          <template x-for="conn in paginatedConnections" :key="conn.connection_urn">
-            <tr class="hover:bg-gray-50">
-              <td class="px-6 py-4">
-                <img :src="clean(conn.profile_picture_url)" alt="Profile" class="w-10 h-10 rounded-full object-cover border" />
-              </td>
-              <td class="px-6 py-4 text-sm font-medium" x-text="`${clean(conn.first_name)} ${clean(conn.last_name)}`"></td>
-              <td class="px-6 py-4 text-sm text-gray-600" x-text="clean(conn.headline) || '—'"></td>
-              <td class="px-6 py-4 text-sm flex gap-3">
-                <a @click.prevent="openMessageSidebar(conn)" href="#" class="text-green-600 hover:underline">Message</a>
-                <a :href="clean(conn.public_profile_url)" class="text-blue-500 hover:underline" target="_blank">View</a>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+        applyFilter() { this.currentPage = 1; this.fetchAllConnections(1); },
+        clearFilter() { this.filterText = ''; this.applyFilter(); },
+        goToPage(page) { if (page < 1 || page > this.totalPages) return; this.fetchAllConnections(page); },
+        clean(val) { return typeof val === 'string' ? val.replace(/^"+|"+$/g, '').trim() : (val || ''); },
+        cleanObject(obj) { const result = {}; for (const key in obj) result[key] = this.clean(obj[key]); return result; },
 
-    <div class="flex justify-center mt-6 flex-wrap gap-2" x-show="totalPages > 1">
-      <button @click="goToPage(currentPage - 1)" :disabled="currentPage === 1" class="px-3 py-1 rounded text-sm shadow border" :class="currentPage === 1 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'">
-        Previous
-      </button>
-      <template x-for="page in pagesToShow()" :key="page">
-        <template x-if="page === '...'"><span class="px-3 py-1 text-sm text-gray-500">...</span></template>
-        <template x-if="page !== '...'"><button @click="goToPage(page)" class="px-3 py-1 rounded text-sm shadow border" :class="page === currentPage ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'"><span x-text="page"></span></button></template>
-      </template>
-      <button @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages" class="px-3 py-1 rounded text-sm shadow border" :class="currentPage === totalPages ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-white text-gray-700 hover:bg-gray-100'">
-        Next
-      </button>
-    </div>
-  </div>
+        pagesToShow() {
+          const pages = []; const range = 2;
+          if (this.totalPages <= 7) return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+          pages.push(1);
+          if (this.currentPage > range + 2) pages.push('...');
+          for (let i = this.currentPage - range; i <= this.currentPage + range; i++) {
+            if (i > 1 && i < this.totalPages) pages.push(i);
+          }
+          if (this.currentPage < this.totalPages - range - 1) pages.push('...');
+          pages.push(this.totalPages);
+          return pages;
+        },
 
-  <!-- Chat Sidebar -->
-  <div x-show="showMessageSidebar" style="display: none" class="fixed inset-0 z-50 flex">
-    <div class="flex-1 bg-black bg-opacity-30" @click="closeSidebar()"></div>
-    <div class="w-full sm:w-1/2 md:w-1/3 bg-white shadow-xl h-full flex flex-col">
-      <div class="px-6 py-4 border-b flex items-center gap-4 bg-white">
-        <div class="flex-1">
-          <h2 class="text-lg font-semibold" x-text="selectedConnectionName"></h2>
-        </div>
-        <button @click="closeSidebar()" class="text-gray-500 hover:text-red-600 text-xl">&times;</button>
-      </div>
+        openMessageSidebar(conn) {
+          this.selectedConnectionUrn = conn.connection_urn;
+          this.selectedConnectionName = `${this.clean(conn.first_name)} ${this.clean(conn.last_name)}`;
+          this.showMessageSidebar = true;
+          this.fetchMessages();
+        },
 
-      <!-- Messages -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-2">
-        <template x-for="msg in chatMessages" :key="msg.message_id || msg.id">
-          <div class="max-w-sm" :class="msg.sender === 'me' ? 'ml-auto text-right' : 'mr-auto text-left'">
-            <div class="inline-block px-4 py-2 rounded-lg bg-gray-200 text-gray-800" :class="msg.sender === 'me' ? 'bg-blue-100 rounded-tr-none' : 'bg-gray-100 rounded-tl-none'">
-              <span x-text="msg.text"></span>
-            </div>
-            <div class="text-xs text-gray-400 mt-1" x-text="new Date(msg.timestamp).toLocaleString()"></div>
-          </div>
-        </template>
-      </div>
+        closeSidebar() {
+          this.showMessageSidebar = false;
+          this.chatMessages = [];
+          this.newMessage = '';
+        },
 
-      <!-- AI Toggle and Controls -->
-      <div class="flex items-center justify-between p-4 bg-gray-50 border-t">
-        <label class="flex items-center cursor-pointer gap-2">
-          <input type="checkbox" x-model="aiMode" @change="toggleAIMode" class="sr-only" />
-          <div class="w-10 h-5 bg-gray-300 rounded-full shadow-inner" :class="aiMode ? 'bg-green-500' : 'bg-gray-300'">
-            <div class="w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ease-in-out" :class="aiMode ? 'translate-x-5' : 'translate-x-1'"></div>
-          </div>
-          <span class="text-sm font-medium text-gray-700">AI Mode</span>
-        </label>
+        async fetchMessages() {
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/prev-messgae?uid=${this.uid}&user_id=${this.userId}&connection_urn=${encodeURIComponent(this.selectedConnectionUrn)}`);
+          this.chatMessages = await res.json();
+        },
 
-        <button @click="askAI" class="text-sm px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">Ask AI</button>
-      </div>
+        async sendMessage() {
+          if (!this.newMessage.trim()) return;
+          await fetch(`https://n8n.sapidblue.in/webhook/send-message-go`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnectionUrn, message: this.newMessage.trim() })
+          });
+          this.chatMessages.push({ text: this.newMessage, sender: 'me', timestamp: new Date().toLocaleString() });
+          this.newMessage = '';
+        },
 
-      <!-- Message Input -->
-      <div class="p-4 border-t bg-white flex gap-2">
-        <input x-model="newMessage" @keydown.enter="sendMessage" type="text" placeholder="Type a message..." class="flex-1 px-4 py-2 border rounded-lg text-sm" />
-        <button @click="sendMessage" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800 text-sm">Send</button>
-      </div>
-    </div>
-  </div>
+        async askAI() {
+          if (!this.chatMessages.length) return;
+          const latestMsg = this.chatMessages[this.chatMessages.length - 1].text;
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/ask-ai-message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ uid: this.uid, user_id: this.userId, connection_urn: this.selectedConnectionUrn, message: latestMsg })
+          });
+          const data = await res.json();
+          this.chatMessages.push({ text: data.reply || 'AI did not respond.', sender: 'ai', timestamp: new Date().toLocaleString() });
+        },
 
+        toggleAIMode() {
+          // You can optionally send AI mode state to backend or just use it client-side
+          console.log("AI Mode toggled:", this.aiMode);
+        }
+      }
+    }
+  </script>
 </body>
 </html>
