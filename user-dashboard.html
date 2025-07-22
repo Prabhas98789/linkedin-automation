@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations(); fetchIndustries();" class="min-h-screen p-6 text-gray-800 font-sans">
+<body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations();" class="min-h-screen p-6 text-gray-800 font-sans">
   <div class="max-w-5xl mx-auto space-y-6">
 
     <div class="flex justify-between items-center">
@@ -54,16 +54,11 @@
     <!-- Modal -->
     <div x-show="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg w-full max-w-md p-6 shadow-lg" @click.away="showAssignModal = false">
-        <h2 class="text-lg font-semibold mb-4">Assign Industry & Location</h2>
+        <h2 class="text-lg font-semibold mb-4">Assign Position Keywords & Location</h2>
 
         <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Industry</label>
-          <select x-model="selectedIndustry" class="w-full px-3 py-2 border rounded">
-            <option value="">Select industry</option>
-            <template x-for="industry in industries" :key="industry.id">
-              <option :value="industry.id" x-text="industry.name"></option>
-            </template>
-          </select>
+          <label class="block text-sm font-medium mb-1">Position / Title Keywords</label>
+          <input type="text" x-model="positionKeywords" placeholder="e.g. HR Manager, Talent Acquisition" class="w-full px-3 py-2 border rounded">
         </div>
 
         <div class="mb-4">
@@ -97,10 +92,9 @@ function accountsDashboard() {
     accounts: [],
     userId,
     locationOptions: [],
-    industries: [],
     showAssignModal: false,
-    selectedIndustry: '',
     selectedLocation: '',
+    positionKeywords: '',
     activeAccount: null,
 
     async fetchAccounts() {
@@ -123,15 +117,6 @@ function accountsDashboard() {
       }
     },
 
-    async fetchIndustries() {
-      try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/linkedin-industry-list`);
-        this.industries = await res.json();
-      } catch (e) {
-        console.error("Failed to fetch industries", e);
-      }
-    },
-
     async toggleConnection(account) {
       account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
       // TODO: connect backend
@@ -139,22 +124,22 @@ function accountsDashboard() {
 
     openAssignModal(account) {
       this.activeAccount = account;
-      this.selectedIndustry = account.industry_id || '';
+      this.positionKeywords = account.position_keywords || '';
       this.selectedLocation = account.location_id || '';
       this.showAssignModal = true;
     },
 
     async submitAssignment() {
-      if (!this.selectedIndustry || !this.selectedLocation || !this.activeAccount) {
-        alert("Please select both industry and location.");
+      if (!this.positionKeywords || !this.selectedLocation || !this.activeAccount) {
+        alert("Please enter keywords and select a location.");
         return;
       }
 
       try {
         const payload = {
           unipile_id: this.activeAccount.unipile_id,
-          industry_id: this.selectedIndustry,
-          location_id: this.selectedLocation,
+          position_keywords: this.positionKeywords,
+          location: this.selectedLocation,
           user_id: this.userId
         };
 
