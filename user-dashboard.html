@@ -7,9 +7,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body x-data="accountsDashboard()" x-init="fetchAccounts()" class="min-h-screen p-6 text-gray-800 font-sans">
+<body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations(); fetchIndustries();" class="min-h-screen p-6 text-gray-800 font-sans">
   <div class="max-w-5xl mx-auto space-y-6">
-    
+
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold">Accounts</h1>
@@ -42,12 +42,45 @@
               <template x-if="account.status === 'DISCONNECTED'">Connect</template>
             </button>
 
-            <!-- ✅ Modified View Button with both user_id and uid -->
+            <button @click="openAssignModal(account)" class="text-sm text-indigo-600 hover:underline">Assign Filters</button>
+
             <a :href="`profile.html?user_id=${userId}&uid=${account.unipile_id}`"
                class="text-blue-600 hover:underline text-sm">View</a>
           </div>
         </div>
       </template>
+    </div>
+
+    <!-- Modal -->
+    <div x-show="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg w-full max-w-md p-6 shadow-lg" @click.away="showAssignModal = false">
+        <h2 class="text-lg font-semibold mb-4">Assign Industry & Location</h2>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Industry</label>
+          <select x-model="selectedIndustry" class="w-full px-3 py-2 border rounded">
+            <option value="">Select industry</option>
+            <template x-for="industry in industries" :key="industry.id">
+              <option :value="industry.id" x-text="industry.name"></option>
+            </template>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Location</label>
+          <select x-model="selectedLocation" class="w-full px-3 py-2 border rounded">
+            <option value="">Select location</option>
+            <template x-for="loc in locationOptions" :key="loc.location_id">
+              <option :value="loc.location_id" x-text="loc.title"></option>
+            </template>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-3">
+          <button @click="submitAssignment" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Save</button>
+          <button @click="showAssignModal = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Cancel</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -62,32 +95,82 @@ function accountsDashboard() {
 
   return {
     accounts: [],
-    userId,  // ✅ Store for use in Alpine
+    userId,
+    locationOptions: [],
+    industries: [],
+    showAssignModal: false,
+    selectedIndustry: '',
+    selectedLocation: '',
+    activeAccount: null,
 
     async fetchAccounts() {
       try {
         const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`);
         const data = await res.json();
-        this.accounts = Array.isArray(data)
-          ? data
-          : data && data.unipile_id
-            ? [data]
-            : [];
+        this.accounts = Array.isArray(data) ? data : data?.unipile_id ? [data] : [];
       } catch (e) {
         console.error(e);
         alert('Failed to load accounts');
       }
     },
 
+    async fetchLocations() {
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/linkedin-location-list`);
+        this.locationOptions = await res.json();
+      } catch (e) {
+        console.error("Failed to fetch locations", e);
+      }
+    },
+
+    async fetchIndustries() {
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/linkedin-industry-list`);
+        this.industries = await res.json();
+      } catch (e) {
+        console.error("Failed to fetch industries", e);
+      }
+    },
+
     async toggleConnection(account) {
       account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
+      // TODO: connect backend
+    },
 
-      // TODO: Hook this to backend later
-      // await fetch('/api/update-status', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ unipile_id: account.unipile_id, status: account.status }),
-      //   headers: { 'Content-Type': 'application/json' }
-      // });
+    openAssignModal(account) {
+      this.activeAccount = account;
+      this.selectedIndustry = account.industry_id || '';
+      this.selectedLocation = account.location_id || '';
+      this.showAssignModal = true;
+    },
+
+    async submitAssignment() {
+      if (!this.selectedIndustry || !this.selectedLocation || !this.activeAccount) {
+        alert("Please select both industry and location.");
+        return;
+      }
+
+      try {
+        const payload = {
+          unipile_id: this.activeAccount.unipile_id,
+          industry_id: this.selectedIndustry,
+          location_id: this.selectedLocation,
+          user_id: this.userId
+        };
+
+        await fetch("https://n8n.sapidblue.in/webhook/update-unipile-data-dashboard-yo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        alert("Assignment updated successfully!");
+        this.showAssignModal = false;
+        this.fetchAccounts();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to update assignment.");
+      }
     },
 
     async connectNewAccount() {
