@@ -54,13 +54,21 @@
     <!-- Modal -->
     <div x-show="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-white rounded-lg w-full max-w-md p-6 shadow-lg" @click.away="showAssignModal = false">
-        <h2 class="text-lg font-semibold mb-4">Assign Position Keywords & Location</h2>
+        <h2 class="text-lg font-semibold mb-4">Assign Position, Industry & Location</h2>
 
+        <!-- Title -->
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1">Position / Title Keywords</label>
           <input type="text" x-model="positionKeywords" placeholder="e.g. HR Manager, Talent Acquisition" class="w-full px-3 py-2 border rounded">
         </div>
 
+        <!-- Industry -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Industry</label>
+          <input type="text" x-model="industryText" placeholder="e.g. IT, Healthcare, Retail" class="w-full px-3 py-2 border rounded">
+        </div>
+
+        <!-- Location -->
         <div class="mb-4">
           <label class="block text-sm font-medium mb-1">Location</label>
           <select x-model="selectedLocation" class="w-full px-3 py-2 border rounded">
@@ -71,6 +79,7 @@
           </select>
         </div>
 
+        <!-- Buttons -->
         <div class="flex justify-end gap-3">
           <button @click="submitAssignment" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Save</button>
           <button @click="showAssignModal = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Cancel</button>
@@ -95,6 +104,7 @@ function accountsDashboard() {
     showAssignModal: false,
     selectedLocation: '',
     positionKeywords: '',
+    industryText: '',
     activeAccount: null,
 
     async fetchAccounts() {
@@ -125,13 +135,14 @@ function accountsDashboard() {
     openAssignModal(account) {
       this.activeAccount = account;
       this.positionKeywords = account.position_keywords || '';
+      this.industryText = account.industry || '';
       this.selectedLocation = account.location_id || '';
       this.showAssignModal = true;
     },
 
     async submitAssignment() {
-      if (!this.positionKeywords || !this.selectedLocation || !this.activeAccount) {
-        alert("Please enter keywords and select a location.");
+      if (!this.positionKeywords || !this.selectedLocation || !this.industryText || !this.activeAccount) {
+        alert("Please fill all fields.");
         return;
       }
 
@@ -139,6 +150,7 @@ function accountsDashboard() {
         const payload = {
           unipile_id: this.activeAccount.unipile_id,
           position_keywords: this.positionKeywords,
+          industry: this.industryText,
           location: this.selectedLocation,
           user_id: this.userId
         };
