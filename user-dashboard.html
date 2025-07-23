@@ -10,6 +10,7 @@
 <body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations();" class="min-h-screen p-6 text-gray-800 font-sans">
   <div class="max-w-5xl mx-auto space-y-6">
 
+    <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold">Accounts</h1>
@@ -21,6 +22,7 @@
       </div>
     </div>
 
+    <!-- Accounts List -->
     <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
       <template x-if="accounts.length === 0">
         <div class="p-6 text-center text-gray-500">No connected accounts.</div>
@@ -30,7 +32,12 @@
         <div class="flex justify-between items-center px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition">
           <div class="flex flex-col">
             <span class="font-medium text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
-            <span class="text-sm text-gray-500" x-text="'Status: ' + account.status"></span>
+            <span class="text-sm" :class="account.status === 'CONNECTED' ? 'text-green-600' : 'text-red-500'" x-text="'Status: ' + account.status"></span>
+            <span class="text-sm text-gray-500" x-text="'Industry: ' + (account.industry || '—')"></span>
+            <span class="text-sm text-gray-500" x-text="'Title: ' + (account.title_keywords || '—')"></span>
+            <span class="text-sm text-gray-500" x-text="'Active: ' + account.active_start + ' to ' + account.active_end"></span>
+            <span class="text-sm text-gray-400" x-text="'Created: ' + formatDate(account.created_at)"></span>
+            <span class="text-sm text-gray-400" x-text="'Updated: ' + formatDate(account.updated_at)"></span>
           </div>
 
           <div class="flex gap-3 items-center">
@@ -129,12 +136,12 @@ function accountsDashboard() {
 
     async toggleConnection(account) {
       account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
-      // TODO: connect backend
+      // Optional: backend call
     },
 
     openAssignModal(account) {
       this.activeAccount = account;
-      this.positionKeywords = account.position_keywords || '';
+      this.positionKeywords = account.title_keywords || '';
       this.industryText = account.industry || '';
       this.selectedLocation = account.location_id || '';
       this.showAssignModal = true;
@@ -183,6 +190,11 @@ function accountsDashboard() {
         console.error(e);
         alert("Failed to initiate connection");
       }
+    },
+
+    formatDate(datetime) {
+      if (!datetime) return '';
+      return new Date(datetime.replace(' ', 'T')).toLocaleString();
     }
   }
 }
