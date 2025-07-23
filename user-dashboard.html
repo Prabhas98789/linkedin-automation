@@ -1,145 +1,90 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-50">
+<html lang="en" class="bg-gray-100">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Accounts Dashboard</title>
+  <title>Assign Filters</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="p-6" x-data="accountsApp()" x-init="fetchAccounts()">
-  <h1 class="text-2xl font-bold mb-4">Accounts</h1>
-
-  <template x-if="accounts.length === 0">
-    <p>Loading...</p>
-  </template>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <template x-for="account in accounts" :key="account.id">
-      <div class="bg-white rounded-xl p-4 shadow">
-        <p><strong>ID:</strong> <span x-text="account.unipile_id"></span></p>
-        <p><strong>Platform:</strong> <span x-text="account.platform"></span></p>
-        <p><strong>Status:</strong> <span x-text="account.status"></span></p>
-        <div class="flex gap-2 mt-2">
-          <button class="bg-blue-500 text-white px-2 py-1 rounded" @click="openModal(account)">Assign Filters</button>
-          <button class="bg-green-500 text-white px-2 py-1 rounded" @click="viewProfile(account)">View</button>
-          <button class="bg-yellow-500 text-white px-2 py-1 rounded" @click="toggleConnection(account)">
-            <span x-text="account.status === 'CONNECTED' ? 'Disconnect' : 'Connect'"></span>
-          </button>
-        </div>
-      </div>
-    </template>
-  </div>
-
-  <!-- Modal -->
-  <div x-show="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div class="bg-white p-6 rounded-xl shadow-lg w-full max-w-md" @click.outside="showModal = false">
-      <h2 class="text-xl font-bold mb-4">Assign Filters</h2>
-
-      <label class="block mb-2 font-medium">Industry</label>
-      <input type="text" class="w-full border p-2 mb-4" x-model="formData.industry" />
-
-      <label class="block mb-2 font-medium">Title Keywords</label>
-      <input type="text" class="w-full border p-2 mb-4" x-model="formData.title_keywords" />
-
-      <label class="block mb-2 font-medium">Location</label>
-      <select class="w-full border p-2 mb-4" x-model="formData.location_id">
-        <option value="">Select Location</option>
-        <template x-for="loc in linkedinLocations" :key="loc.id">
-          <option :value="loc.id" x-text="loc.name"></option>
+<body class="p-6">
+  <div x-data="{
+    accounts: [
+      {
+        id: 1,
+        unipile_id: 'V-y45f4bQW-xrrlsiFYctQ',
+        platform: 'WhatsApp',
+        industry: 'fintech',
+        warmup: 1,
+        post: 1,
+        location_id: 103644278,
+        title_keywords: 'ceo',
+        active_start: '16:00:00',
+        active_end: '18:00:00'
+      },
+      {
+        id: 2,
+        unipile_id: 'AfswY-f4Rm-UXgh905O-0A',
+        platform: 'LinkedIn',
+        industry: 'fintech',
+        warmup: 1,
+        post: 1,
+        location_id: 101452733,
+        title_keywords: 'ceo',
+        active_start: '16:00:00',
+        active_end: '18:00:00'
+      }
+    ],
+    selected: null
+  }" class="max-w-xl mx-auto space-y-6">
+    
+    <!-- Account Selector -->
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Choose Account</label>
+      <select class="w-full border rounded px-3 py-2" @change="selected = accounts.find(acc => acc.unipile_id === $event.target.value)">
+        <option value="">-- Select --</option>
+        <template x-for="account in accounts" :key="account.unipile_id">
+          <option :value="account.unipile_id" x-text="`${account.platform} (${account.unipile_id})`"></option>
         </template>
       </select>
-
-      <div class="mb-4">
-        <label class="inline-flex items-center">
-          <input type="checkbox" class="form-checkbox" x-model="formData.warmup" />
-          <span class="ml-2">Warmup</span>
-        </label>
-      </div>
-
-      <div class="flex justify-end gap-2">
-        <button class="bg-gray-300 text-black px-4 py-2 rounded" @click="showModal = false">Cancel</button>
-        <button class="bg-blue-600 text-white px-4 py-2 rounded" @click="submitAssignment()">Save</button>
-      </div>
     </div>
+
+    <!-- Assign Filters Form -->
+    <form x-show="selected" @submit.prevent="console.log(selected)" class="space-y-4 bg-white p-6 rounded shadow">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Industry</label>
+          <input type="text" x-model="selected.industry" class="w-full mt-1 border px-3 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Location ID</label>
+          <input type="number" x-model="selected.location_id" class="w-full mt-1 border px-3 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Title Keywords</label>
+          <input type="text" x-model="selected.title_keywords" class="w-full mt-1 border px-3 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Active Start</label>
+          <input type="time" x-model="selected.active_start" class="w-full mt-1 border px-3 py-2 rounded" />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Active End</label>
+          <input type="time" x-model="selected.active_end" class="w-full mt-1 border px-3 py-2 rounded" />
+        </div>
+        <div class="flex items-center space-x-2 mt-6">
+          <input type="checkbox" x-model="selected.warmup" :checked="selected.warmup == 1" class="form-checkbox h-4 w-4" />
+          <label class="text-sm font-medium text-gray-700">Enable Warmup</label>
+        </div>
+        <div class="flex items-center space-x-2 mt-6">
+          <input type="checkbox" x-model="selected.post" :checked="selected.post == 1" class="form-checkbox h-4 w-4" />
+          <label class="text-sm font-medium text-gray-700">Enable Post</label>
+        </div>
+      </div>
+      <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+        Save Filters
+      </button>
+    </form>
   </div>
-
-  <script>
-    function accountsApp() {
-      return {
-        accounts: [],
-        linkedinLocations: [],
-        showModal: false,
-        selectedAccount: null,
-        formData: {
-          industry: '',
-          title_keywords: '',
-          location_id: '',
-          warmup: false
-        },
-
-        async fetchAccounts() {
-          const res = await fetch('https://n8n.sapidblue.in/webhook/get-unipile-accounts');
-          this.accounts = await res.json();
-
-          const locRes = await fetch('https://n8n.sapidblue.in/webhook/get-linkedin-locations');
-          this.linkedinLocations = await locRes.json();
-        },
-
-        openModal(account) {
-          this.selectedAccount = account;
-          this.formData.industry = account.industry || '';
-          this.formData.title_keywords = account.title_keywords || '';
-          this.formData.location_id = account.location_id || '';
-          this.formData.warmup = account.warmup === 1;
-          this.showModal = true;
-        },
-
-        async submitAssignment() {
-          const payload = {
-            account_id: this.selectedAccount.unipile_id,
-            industry: this.formData.industry,
-            title_keywords: this.formData.title_keywords,
-            location_id: this.formData.location_id,
-            warmup: this.formData.warmup ? 1 : 0
-          };
-
-          const res = await fetch('https://n8n.sapidblue.in/webhook/assign-filters', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-
-          if (res.ok) {
-            alert('Filters updated!');
-            this.showModal = false;
-            this.fetchAccounts(); // refresh
-          } else {
-            alert('Error updating filters.');
-          }
-        },
-
-        viewProfile(account) {
-          const url = `https://www.linkedin.com/search/results/people/?keywords=${account.title_keywords}&origin=GLOBAL_SEARCH_HEADER&geoUrn=["${account.location_id}"]`;
-          window.open(url, '_blank');
-        },
-
-        async toggleConnection(account) {
-          const res = await fetch('https://n8n.sapidblue.in/webhook/toggle-unipile-connection', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ account_id: account.unipile_id })
-          });
-
-          if (res.ok) {
-            alert('Connection toggled.');
-            this.fetchAccounts();
-          } else {
-            alert('Failed to toggle connection.');
-          }
-        }
-      }
-    }
-  </script>
 </body>
 </html>
