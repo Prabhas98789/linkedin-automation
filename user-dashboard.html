@@ -9,7 +9,6 @@
 </head>
 <body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations();" class="min-h-screen p-6 text-gray-800 font-sans">
   <div class="max-w-5xl mx-auto space-y-6">
-
     <!-- Header -->
     <div class="flex justify-between items-center">
       <div>
@@ -30,14 +29,14 @@
 
       <template x-for="(account, index) in accounts" :key="index">
         <div class="flex justify-between items-center px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition">
-          <div class="flex flex-col">
-            <span class="font-medium text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
-            <span class="text-sm" :class="account.status === 'CONNECTED' ? 'text-green-600' : 'text-red-500'" x-text="'Status: ' + account.status"></span>
-            <span class="text-sm text-gray-500" x-text="'Industry: ' + (account.industry || '—')"></span>
-            <span class="text-sm text-gray-500" x-text="'Title: ' + (account.title_keywords || '—')"></span>
-            <span class="text-sm text-gray-500" x-text="'Active: ' + account.active_start + ' to ' + account.active_end"></span>
-            <span class="text-sm text-gray-400" x-text="'Created: ' + formatDate(account.created_at)"></span>
-            <span class="text-sm text-gray-400" x-text="'Updated: ' + formatDate(account.updated_at)"></span>
+          <div class="flex flex-col text-sm space-y-1">
+            <span class="font-medium text-base text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
+            <span :class="account.status === 'CONNECTED' ? 'text-green-600' : 'text-red-500'" x-text="'Status: ' + (account.status || '—')"></span>
+            <span class="text-gray-600" x-text="'Industry: ' + (account.industry || '—')"></span>
+            <span class="text-gray-600" x-text="'Title: ' + (account.title_keywords || '—')"></span>
+            <span class="text-gray-600" x-text="'Active: ' + (account.active_start || '—') + ' to ' + (account.active_end || '—')"></span>
+            <span class="text-gray-400" x-text="'Created: ' + formatDate(account.created_at)"></span>
+            <span class="text-gray-400" x-text="'Updated: ' + formatDate(account.updated_at)"></span>
           </div>
 
           <div class="flex gap-3 items-center">
@@ -46,7 +45,7 @@
               :class="account.status === 'CONNECTED' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
               class="text-white px-3 py-1 rounded text-sm shadow">
               <template x-if="account.status === 'CONNECTED'">Disconnect</template>
-              <template x-if="account.status === 'DISCONNECTED'">Connect</template>
+              <template x-if="account.status !== 'CONNECTED'">Connect</template>
             </button>
 
             <button @click="openAssignModal(account)" class="text-sm text-indigo-600 hover:underline">Assign Filters</button>
@@ -136,7 +135,7 @@ function accountsDashboard() {
 
     async toggleConnection(account) {
       account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
-      // Optional: backend call
+      // Optional: Call backend here
     },
 
     openAssignModal(account) {
@@ -193,7 +192,7 @@ function accountsDashboard() {
     },
 
     formatDate(datetime) {
-      if (!datetime) return '';
+      if (!datetime) return '—';
       return new Date(datetime.replace(' ', 'T')).toLocaleString();
     }
   }
