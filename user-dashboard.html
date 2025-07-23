@@ -80,6 +80,13 @@
           <input type="text" x-model="industryText" placeholder="e.g. IT, Finance" class="w-full px-3 py-2 border rounded">
         </div>
 
+        <!-- Message -->
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Message</label>
+          <textarea x-model="messageText" placeholder="Enter your message..." rows="3" class="w-full px-3 py-2 border rounded"></textarea>
+        </div>
+
+
         <!-- Location -->
         <div class="mb-3">
           <label class="block text-sm font-medium mb-1">Location</label>
@@ -139,6 +146,7 @@ function accountsDashboard() {
     selectedLocation: '',
     positionKeywords: '',
     industryText: '',
+    messageText: '',
     activeStart: '',
     activeEnd: '',
     warmup: false,
@@ -174,6 +182,7 @@ function accountsDashboard() {
       this.activeAccount = account;
       this.positionKeywords = account.title_keywords || '';
       this.industryText = account.industry || '';
+      this.messageText = account.message || '';
       this.selectedLocation = account.location_id || '';
       this.activeStart = account.active_start || '';
       this.activeEnd = account.active_end || '';
@@ -198,6 +207,7 @@ function accountsDashboard() {
           active_end: this.activeEnd,
           warmup: this.warmup ? 1 : 0,
           post: this.post ? 1 : 0,
+          message: this.messageText,
           user_id: this.userId
         };
 
