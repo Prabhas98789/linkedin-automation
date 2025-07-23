@@ -1,90 +1,237 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-gray-100">
+<html lang="en" class="bg-gray-50">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Assign Filters</title>
+  <title>Connected Accounts</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-<body class="p-6">
-  <div x-data="{
-    accounts: [
-      {
-        id: 1,
-        unipile_id: 'V-y45f4bQW-xrrlsiFYctQ',
-        platform: 'WhatsApp',
-        industry: 'fintech',
-        warmup: 1,
-        post: 1,
-        location_id: 103644278,
-        title_keywords: 'ceo',
-        active_start: '16:00:00',
-        active_end: '18:00:00'
-      },
-      {
-        id: 2,
-        unipile_id: 'AfswY-f4Rm-UXgh905O-0A',
-        platform: 'LinkedIn',
-        industry: 'fintech',
-        warmup: 1,
-        post: 1,
-        location_id: 101452733,
-        title_keywords: 'ceo',
-        active_start: '16:00:00',
-        active_end: '18:00:00'
-      }
-    ],
-    selected: null
-  }" class="max-w-xl mx-auto space-y-6">
-    
-    <!-- Account Selector -->
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Choose Account</label>
-      <select class="w-full border rounded px-3 py-2" @change="selected = accounts.find(acc => acc.unipile_id === $event.target.value)">
-        <option value="">-- Select --</option>
-        <template x-for="account in accounts" :key="account.unipile_id">
-          <option :value="account.unipile_id" x-text="`${account.platform} (${account.unipile_id})`"></option>
-        </template>
-      </select>
+<body x-data="accountsDashboard()" x-init="fetchAccounts(); fetchLocations();" class="min-h-screen p-6 text-gray-800 font-sans">
+  <div class="max-w-5xl mx-auto space-y-6">
+
+    <div class="flex justify-between items-center">
+      <div>
+        <h1 class="text-2xl font-bold">Accounts</h1>
+        <p class="text-sm text-gray-500">Manage accounts connected to your app.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-100">📘 Documentation</button>
+        <button @click="connectNewAccount" class="px-4 py-2 bg-gray-900 text-white rounded-md text-sm hover:bg-black">➕ Connect an account</button>
+      </div>
     </div>
 
-    <!-- Assign Filters Form -->
-    <form x-show="selected" @submit.prevent="console.log(selected)" class="space-y-4 bg-white p-6 rounded shadow">
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Industry</label>
-          <input type="text" x-model="selected.industry" class="w-full mt-1 border px-3 py-2 rounded" />
+    <div class="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
+      <template x-if="accounts.length === 0">
+        <div class="p-6 text-center text-gray-500">No connected accounts.</div>
+      </template>
+
+      <template x-for="(account, index) in accounts" :key="index">
+        <div class="px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition">
+          <div class="flex justify-between items-center">
+            <div class="flex flex-col">
+              <span class="font-medium text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
+              <span class="text-sm text-gray-500" x-text="'Status: ' + account.status"></span>
+            </div>
+
+            <div class="flex gap-3 items-center">
+              <button
+                @click="toggleConnection(account)"
+                :class="account.status === 'CONNECTED' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                class="text-white px-3 py-1 rounded text-sm shadow">
+                <template x-if="account.status === 'CONNECTED'">Disconnect</template>
+                <template x-if="account.status === 'DISCONNECTED'">Connect</template>
+              </button>
+
+              <button @click="openAssignModal(account)" class="text-sm text-indigo-600 hover:underline">Assign Filters</button>
+
+              <a :href="`profile.html?user_id=${userId}&uid=${account.unipile_id}`"
+                 class="text-blue-600 hover:underline text-sm">View</a>
+            </div>
+          </div>
+
+          <!-- Extra Account Info -->
+          <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-2">
+            <div><strong>Position:</strong> <span x-text="account.title_keywords || '-'"></span></div>
+            <div><strong>Industry:</strong> <span x-text="account.industry || '-'"></span></div>
+            <div><strong>Location ID:</strong> <span x-text="account.location_id || '-'"></span></div>
+            <div><strong>Active:</strong> <span x-text="(account.active_start || '-') + ' - ' + (account.active_end || '-')"></span></div>
+            <div><strong>Warmup:</strong> <span x-text="account.warmup ? 'Yes' : 'No'"></span></div>
+            <div><strong>Post:</strong> <span x-text="account.post ? 'Yes' : 'No'"></span></div>
+          </div>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Location ID</label>
-          <input type="number" x-model="selected.location_id" class="w-full mt-1 border px-3 py-2 rounded" />
+      </template>
+    </div>
+
+    <!-- Assign Modal -->
+    <div x-show="showAssignModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg w-full max-w-md p-6 shadow-lg" @click.away="showAssignModal = false">
+        <h2 class="text-lg font-semibold mb-4">Assign Position, Industry & Location</h2>
+
+        <!-- Position -->
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Position / Title Keywords</label>
+          <input type="text" x-model="positionKeywords" placeholder="e.g. HR Manager" class="w-full px-3 py-2 border rounded">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Title Keywords</label>
-          <input type="text" x-model="selected.title_keywords" class="w-full mt-1 border px-3 py-2 rounded" />
+
+        <!-- Industry -->
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Industry</label>
+          <input type="text" x-model="industryText" placeholder="e.g. IT, Finance" class="w-full px-3 py-2 border rounded">
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Active Start</label>
-          <input type="time" x-model="selected.active_start" class="w-full mt-1 border px-3 py-2 rounded" />
+
+        <!-- Location -->
+        <div class="mb-3">
+          <label class="block text-sm font-medium mb-1">Location</label>
+          <select x-model="selectedLocation" class="w-full px-3 py-2 border rounded">
+            <option value="">Select location</option>
+            <template x-for="loc in locationOptions" :key="loc.location_id">
+              <option :value="loc.location_id" x-text="loc.title"></option>
+            </template>
+          </select>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Active End</label>
-          <input type="time" x-model="selected.active_end" class="w-full mt-1 border px-3 py-2 rounded" />
+
+        <!-- Time Range -->
+        <div class="mb-3 flex gap-2">
+          <div class="w-1/2">
+            <label class="block text-sm font-medium mb-1">Active Start</label>
+            <input type="time" x-model="activeStart" class="w-full px-3 py-2 border rounded">
+          </div>
+          <div class="w-1/2">
+            <label class="block text-sm font-medium mb-1">Active End</label>
+            <input type="time" x-model="activeEnd" class="w-full px-3 py-2 border rounded">
+          </div>
         </div>
-        <div class="flex items-center space-x-2 mt-6">
-          <input type="checkbox" x-model="selected.warmup" :checked="selected.warmup == 1" class="form-checkbox h-4 w-4" />
-          <label class="text-sm font-medium text-gray-700">Enable Warmup</label>
+
+        <!-- Warmup / Post -->
+        <div class="mb-4 flex gap-6">
+          <label class="inline-flex items-center">
+            <input type="checkbox" x-model="warmup" class="mr-2"> Warmup
+          </label>
+          <label class="inline-flex items-center">
+            <input type="checkbox" x-model="post" class="mr-2"> Post
+          </label>
         </div>
-        <div class="flex items-center space-x-2 mt-6">
-          <input type="checkbox" x-model="selected.post" :checked="selected.post == 1" class="form-checkbox h-4 w-4" />
-          <label class="text-sm font-medium text-gray-700">Enable Post</label>
+
+        <!-- Buttons -->
+        <div class="flex justify-end gap-3">
+          <button @click="submitAssignment" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">Save</button>
+          <button @click="showAssignModal = false" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">Cancel</button>
         </div>
       </div>
-      <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-        Save Filters
-      </button>
-    </form>
+    </div>
   </div>
+
+<script>
+function accountsDashboard() {
+  const userId = new URLSearchParams(window.location.search).get("user_id");
+  if (!userId) {
+    alert("Missing user_id. Redirecting...");
+    window.location.href = "login.html";
+    return;
+  }
+
+  return {
+    accounts: [],
+    userId,
+    locationOptions: [],
+    showAssignModal: false,
+    selectedLocation: '',
+    positionKeywords: '',
+    industryText: '',
+    activeStart: '',
+    activeEnd: '',
+    warmup: false,
+    post: false,
+    activeAccount: null,
+
+    async fetchAccounts() {
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`);
+        const data = await res.json();
+        this.accounts = Array.isArray(data) ? data : data?.unipile_id ? [data] : [];
+      } catch (e) {
+        console.error(e);
+        alert('Failed to load accounts');
+      }
+    },
+
+    async fetchLocations() {
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/linkedin-location-list`);
+        this.locationOptions = await res.json();
+      } catch (e) {
+        console.error("Failed to fetch locations", e);
+      }
+    },
+
+    async toggleConnection(account) {
+      account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
+      // TODO: connect backend
+    },
+
+    openAssignModal(account) {
+      this.activeAccount = account;
+      this.positionKeywords = account.title_keywords || '';
+      this.industryText = account.industry || '';
+      this.selectedLocation = account.location_id || '';
+      this.activeStart = account.active_start || '';
+      this.activeEnd = account.active_end || '';
+      this.warmup = account.warmup === 1;
+      this.post = account.post === 1;
+      this.showAssignModal = true;
+    },
+
+    async submitAssignment() {
+      if (!this.positionKeywords || !this.selectedLocation || !this.industryText || !this.activeStart || !this.activeEnd) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      try {
+        const payload = {
+          unipile_id: this.activeAccount.unipile_id,
+          position_keywords: this.positionKeywords,
+          industry: this.industryText,
+          location: this.selectedLocation,
+          active_start: this.activeStart,
+          active_end: this.activeEnd,
+          warmup: this.warmup ? 1 : 0,
+          post: this.post ? 1 : 0,
+          user_id: this.userId
+        };
+
+        await fetch("https://n8n.sapidblue.in/webhook/update-unipile-data-dashboard-yo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        alert("Assignment updated successfully!");
+        this.showAssignModal = false;
+        this.fetchAccounts();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to update assignment.");
+      }
+    },
+
+    async connectNewAccount() {
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${userId}`);
+        const data = await res.json();
+        if (data && data[0]?.url) {
+          window.location.href = data[0].url;
+        } else {
+          alert("Couldn't generate auth link");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to initiate connection");
+      }
+    }
+  }
+}
+</script>
 </body>
 </html>
