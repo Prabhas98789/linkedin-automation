@@ -66,8 +66,8 @@
       </div>
     </template>
 
-    <!-- 3 Action Boxes -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+   <!-- 3 Action Boxes -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-6">
       <!-- Connections Box -->
       <div
         class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
@@ -76,7 +76,7 @@
         <div class="text-xl font-semibold">Connections</div>
         <div class="text-gray-600 text-sm mt-1" x-text="profile?.connections_count + ' connections'"></div>
       </div>
-
+    
       <!-- Messages Box -->
       <div
         class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
@@ -85,7 +85,7 @@
         <div class="text-xl font-semibold">Messages</div>
         <div class="text-gray-600 text-sm mt-1">View message history</div>
       </div>
-
+    
       <!-- Sequence Box -->
       <div
         class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
@@ -94,7 +94,26 @@
         <div class="text-xl font-semibold">Sequence</div>
         <div class="text-gray-600 text-sm mt-1">Manage sequences</div>
       </div>
+    
+      <!-- Post Box -->
+      <div
+        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        @click="goTo('post.html')"
+      >
+        <div class="text-xl font-semibold">Post</div>
+        <div class="text-gray-600 text-sm mt-1">Create and manage posts</div>
+      </div>
+    
+      <!-- Warmup Box -->
+      <div
+        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        @click="goTo('warmup.html')"
+      >
+        <div class="text-xl font-semibold">Warmup</div>
+        <div class="text-gray-600 text-sm mt-1">Handle warmup settings</div>
+      </div>
     </div>
+
 
     <!-- Back -->
     <div class="text-center pt-4">
