@@ -163,15 +163,25 @@ function accountsDashboard() {
     activeAccount: null,
 
     async fetchAccounts() {
-      try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`);
-        const data = await res.json();
-        this.accounts = Array.isArray(data) ? data : data?.unipile_id ? [data] : [];
-      } catch (e) {
-        console.error(e);
-        alert('Failed to load accounts');
-      }
-    },
+    try {
+      const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`);
+      if (!res.ok) throw new Error('Network error');
+      const data = await res.json();
+  
+      // Normalize the response
+      this.accounts = Array.isArray(data)
+        ? data
+        : (data && data.unipile_id) ? [data] : [];
+  
+      // Optionally: add an explicit empty state if needed
+      console.log("Accounts loaded:", this.accounts);
+    } catch (e) {
+      console.error('Real error loading accounts:', e);
+      // Show alert ONLY if it's truly a network/server error
+      alert('Failed to load accounts. Please try again.');
+    }
+  },
+
 
     async fetchLocations() {
       try {
