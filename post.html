@@ -55,7 +55,7 @@
             <h3 class="text-lg font-semibold" x-text="news.title"></h3>
             <p class="text-gray-600 text-sm" x-text="formatDate(news.posttime)"></p>
             <p class="mt-2" x-text="news.textposted"></p>
-            <img :src="news.image_url" alt="Image" class="mt-2 max-w-xs rounded">
+            <img :src="news.image_url" alt="Image" class="mt-2 max-w-xs rounded" x-show="news.image_url">
           </div>
         </template>
       </div>
@@ -83,10 +83,10 @@
         },
 
         async fetchPosts() {
-          if (!this.account_id) return;
-          const res = await fetch('https://n8n.sapidblue.in/webhook/view-news-details-online');
+          if (!this.account_id || !this.user_id) return;
+          const res = await fetch(`https://n8n.sapidblue.in/webhook/view-news-details-online?account_id=${this.account_id}&user_id=${this.user_id}`);
           const data = await res.json();
-          this.posts = data.filter(p => p.account_id == this.account_id);
+          this.posts = data;
         },
 
         formatDate(dateStr) {
