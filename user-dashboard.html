@@ -72,7 +72,7 @@
             </div>
             <div class="flex gap-3 items-center text-sm">
               <button @click="toggleConnection(account)"
-                :class="account.status === 'CONNECTED' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                :class="account.status === 'CONNECTED' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'"
                 class="text-white px-3 py-1 rounded shadow">
                 <template x-if="account.status === 'CONNECTED'">Disconnect</template>
                 <template x-if="account.status === 'DISCONNECTED'">Connect</template>
