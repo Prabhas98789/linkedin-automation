@@ -1,14 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Manage Posts</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
-
 <body class="bg-gray-100">
   <div class="min-h-screen flex">
     <!-- Sidebar -->
@@ -24,7 +22,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 p-8" x-data="postManager()">
+    <main class="flex-1 p-8" x-data="postManager()" x-init="init()">
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-3xl font-bold">Manage Posts</h1>
         <button @click="showForm = true" class="bg-blue-600 text-white px-4 py-2 rounded">Create a Post</button>
@@ -55,7 +53,7 @@
         <template x-for="news in posts" :key="news.title">
           <div class="mb-4 border-b pb-4">
             <h3 class="text-lg font-semibold" x-text="news.title"></h3>
-            <p class="text-gray-600 text-sm" x-text="formatDate(news.published_date)"></p>
+            <p class="text-gray-600 text-sm" x-text="formatDate(news.posttime)"></p>
             <p class="mt-2" x-text="news.textposted"></p>
             <img :src="news.image_url" alt="Image" class="mt-2 max-w-xs rounded">
           </div>
@@ -68,6 +66,8 @@
     function postManager() {
       return {
         showForm: false,
+        account_id: '',
+        user_id: '',
         form: {
           title: '',
           textposted: '',
@@ -83,9 +83,10 @@
         },
 
         async fetchPosts() {
+          if (!this.account_id) return;
           const res = await fetch('https://n8n.sapidblue.in/webhook/view-news-details-online');
           const data = await res.json();
-          this.posts = data.filter(p => p.account_id === this.account_id);
+          this.posts = data.filter(p => p.account_id == this.account_id);
         },
 
         formatDate(dateStr) {
@@ -132,5 +133,4 @@
     });
   </script>
 </body>
-
 </html>
