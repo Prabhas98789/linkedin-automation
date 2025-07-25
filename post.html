@@ -50,11 +50,14 @@
       <!-- Posted News List -->
       <div class="bg-white p-6 rounded shadow">
         <h2 class="text-xl font-bold mb-4">Posted News</h2>
-        <template x-for="news in posts" :key="news.title">
+        <template x-if="posts.length === 0">
+          <p class="text-gray-500">No posts available.</p>
+        </template>
+        <template x-for="news in posts" :key="news.title + news.posttime">
           <div class="mb-4 border-b pb-4">
-            <h3 class="text-lg font-semibold" x-text="news.title"></h3>
+            <h3 class="text-lg font-semibold" x-text="news.title || 'Untitled Post'"></h3>
             <p class="text-gray-600 text-sm" x-text="formatDate(news.posttime)"></p>
-            <p class="mt-2" x-text="news.textposted"></p>
+            <p class="mt-2" x-text="news.textposted || 'No content'"></p>
             <img :src="news.image_url" alt="Image" class="mt-2 max-w-xs rounded" x-show="news.image_url">
           </div>
         </template>
@@ -77,16 +80,24 @@
 
         async init() {
           const params = new URLSearchParams(window.location.search);
-          this.account_id = params.get("account_id") || '';
+          this.account_id = params.get("uid") || ''; // Use 'uid' from query as account_id
           this.user_id = params.get("user_id") || '';
+          if (!this.account_id || !this.user_id) {
+            alert("Missing account_id or user_id in URL.");
+            return;
+          }
           await this.fetchPosts();
         },
 
         async fetchPosts() {
-          if (!this.account_id || !this.user_id) return;
-          const res = await fetch(`https://n8n.sapidblue.in/webhook/view-news-details-online?account_id=${this.account_id}&user_id=${this.user_id}`);
-          const data = await res.json();
-          this.posts = data;
+          try {
+            const res = await fetch(`https://n8n.sapidblue.in/webhook/view-news-details-online?account_id=${this.account_id}&user_id=${this.user_id}`);
+            const data = await res.json();
+            this.posts = Array.isArray(data) ? data : [];
+          } catch (error) {
+            console.error("Fetch posts failed", error);
+            this.posts = [];
+          }
         },
 
         formatDate(dateStr) {
@@ -100,7 +111,7 @@
           reader.onload = () => {
             this.form.image_url = reader.result;
           };
-          reader.readAsDataURL(file);
+          if (file) reader.readAsDataURL(file);
         },
 
         async submitPost() {
@@ -113,17 +124,22 @@
             posttime: new Date().toISOString()
           };
 
-          await fetch("https://n8n.sapidblue.in/webhook/Postonlinkedinwithunipile", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(payload)
-          });
+          try {
+            await fetch("https://n8n.sapidblue.in/webhook/Postonlinkedinwithunipile", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify(payload)
+            });
 
-          this.form = { title: '', textposted: '', image_url: '' };
-          this.showForm = false;
-          await this.fetchPosts();
+            this.form = { title: '', textposted: '', image_url: '' };
+            this.showForm = false;
+            await this.fetchPosts();
+          } catch (error) {
+            console.error("Failed to post:", error);
+            alert("Failed to submit the post.");
+          }
         }
       }
     }
