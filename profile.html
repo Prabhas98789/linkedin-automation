@@ -67,52 +67,55 @@
     </template>
 
    <!-- 3 Action Boxes -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-4 mt-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 mt-6">
+    
       <!-- Connections Box -->
       <div
-        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        class="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg cursor-pointer transition-all hover:bg-blue-50"
         @click="goTo('connections.html')"
       >
-        <div class="text-xl font-semibold">Connections</div>
-        <div class="text-gray-600 text-sm mt-1" x-text="profile?.connections_count + ' connections'"></div>
+        <div class="text-lg font-semibold text-blue-800 mb-1">Connections</div>
+        <div class="text-gray-600 text-sm" x-text="profile?.connections_count + ' connections'"></div>
       </div>
     
       <!-- Messages Box -->
       <div
-        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        class="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg cursor-pointer transition-all hover:bg-green-50"
         @click="goTo('message.html')"
       >
-        <div class="text-xl font-semibold">Messages</div>
-        <div class="text-gray-600 text-sm mt-1">View message history</div>
+        <div class="text-lg font-semibold text-green-800 mb-1">Messages</div>
+        <div class="text-gray-600 text-sm">View message history</div>
       </div>
     
       <!-- Sequence Box -->
       <div
-        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        class="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg cursor-pointer transition-all hover:bg-yellow-50"
         @click="goTo('sequence.html')"
       >
-        <div class="text-xl font-semibold">Sequence</div>
-        <div class="text-gray-600 text-sm mt-1">Manage sequences</div>
+        <div class="text-lg font-semibold text-yellow-800 mb-1">Sequence</div>
+        <div class="text-gray-600 text-sm">Manage sequences</div>
       </div>
     
       <!-- Post Box -->
       <div
-        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        class="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg cursor-pointer transition-all hover:bg-purple-50"
         @click="goTo('post.html')"
       >
-        <div class="text-xl font-semibold">Post</div>
-        <div class="text-gray-600 text-sm mt-1">Create and manage posts</div>
+        <div class="text-lg font-semibold text-purple-800 mb-1">Post</div>
+        <div class="text-gray-600 text-sm">Create and manage posts</div>
       </div>
     
       <!-- Warmup Box -->
       <div
-        class="bg-white border border-gray-200 rounded-lg p-4 shadow cursor-pointer hover:bg-gray-50 transition"
+        class="bg-white border border-gray-200 rounded-xl p-5 shadow-md hover:shadow-lg cursor-pointer transition-all hover:bg-pink-50"
         @click="goTo('warmup.html')"
       >
-        <div class="text-xl font-semibold">Warmup</div>
-        <div class="text-gray-600 text-sm mt-1">Handle warmup settings</div>
+        <div class="text-lg font-semibold text-pink-800 mb-1">Warmup</div>
+        <div class="text-gray-600 text-sm">Handle warmup settings</div>
       </div>
-    </div>
+
+</div>
+
 
 
     <!-- Back -->
