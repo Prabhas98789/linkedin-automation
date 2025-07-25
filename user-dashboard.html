@@ -36,41 +36,56 @@
       </template>
 
 
-      <template x-for="(account, index) in accounts" :key="index">
-        <div class="px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition">
-          <div class="flex justify-between items-center">
-            <div class="flex flex-col">
-              <span class="font-medium text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
-              <span class="text-sm text-gray-500" x-text="'Status: ' + account.status"></span>
+     <template x-for="(account, index) in accounts" :key="index">
+      <div class="px-6 py-4 border-t border-gray-100 hover:bg-gray-50 transition">
+    
+        <!-- Enriched View -->
+        <template x-if="account.profile_enriched">
+          <div class="flex gap-4 items-center">
+            <img :src="account.profile_picture_url" alt="Profile picture"
+                 class="w-16 h-16 rounded-full object-cover border">
+            <div class="flex-1">
+              <h2 class="text-lg font-semibold text-gray-800" x-text="account.full_name"></h2>
+              <p class="text-sm text-gray-600" x-text="account.headline"></p>
+              <p class="text-sm text-gray-400 mt-1" x-text="account.location"></p>
+              <p class="text-xs text-gray-400 mt-1" x-text="'Connections: ' + account.connections_count + ' • Followers: ' + account.follower_count"></p>
             </div>
-
-            <div class="flex gap-3 items-center">
-              <button
-                @click="toggleConnection(account)"
+            <div class="flex flex-col gap-2 text-sm">
+              <button @click="toggleConnection(account)"
                 :class="account.status === 'CONNECTED' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
-                class="text-white px-3 py-1 rounded text-sm shadow">
+                class="text-white px-3 py-1 rounded shadow">
                 <template x-if="account.status === 'CONNECTED'">Disconnect</template>
                 <template x-if="account.status === 'DISCONNECTED'">Connect</template>
               </button>
-
-              <button @click="openAssignModal(account)" class="text-sm text-indigo-600 hover:underline">Assign Filters</button>
-
-              <a :href="`profile.html?user_id=${userId}&uid=${account.unipile_id}`"
-                 class="text-blue-600 hover:underline text-sm">View</a>
+              <button @click="openAssignModal(account)" class="text-indigo-600 hover:underline">Assign Filters</button>
+              <a :href="`profile.html?user_id=${userId}&uid=${account.unipile_id}`" class="text-blue-600 hover:underline">View</a>
             </div>
           </div>
-
-          <!-- Extra Account Info -->
-          <div class="text-sm text-gray-600 mt-2 grid grid-cols-2 gap-2">
-            <div><strong>Position:</strong> <span x-text="account.title_keywords || '-'"></span></div>
-            <div><strong>Industry:</strong> <span x-text="account.industry || '-'"></span></div>
-            <div><strong>Location ID:</strong> <span x-text="account.location_id || '-'"></span></div>
-            <div><strong>Active:</strong> <span x-text="(account.active_start || '-') + ' - ' + (account.active_end || '-')"></span></div>
-            <div><strong>Warmup:</strong> <span x-text="account.warmup ? 'Yes' : 'No'"></span></div>
-            <div><strong>Post:</strong> <span x-text="account.post ? 'Yes' : 'No'"></span></div>
+        </template>
+    
+        <!-- Fallback View -->
+        <template x-if="!account.profile_enriched">
+          <div class="flex justify-between items-center">
+            <div>
+              <span class="font-medium text-gray-800" x-text="account.platform + ' • ' + account.unipile_id"></span>
+              <span class="block text-sm text-gray-500" x-text="'Status: ' + account.status"></span>
+            </div>
+            <div class="flex gap-3 items-center text-sm">
+              <button @click="toggleConnection(account)"
+                :class="account.status === 'CONNECTED' ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'"
+                class="text-white px-3 py-1 rounded shadow">
+                <template x-if="account.status === 'CONNECTED'">Disconnect</template>
+                <template x-if="account.status === 'DISCONNECTED'">Connect</template>
+              </button>
+              <button @click="openAssignModal(account)" class="text-indigo-600 hover:underline">Assign Filters</button>
+              <a :href="`profile.html?user_id=${userId}&uid=${account.unipile_id}`" class="text-blue-600 hover:underline">View</a>
+            </div>
           </div>
-        </div>
-      </template>
+        </template>
+
+  </div>
+</template>
+
     </div>
 
     <!-- Assign Modal -->
@@ -164,24 +179,45 @@ function accountsDashboard() {
     activeAccount: null,
 
     async fetchAccounts() {
-    try {
-      const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${userId}`);
-      if (!res.ok) throw new Error('Network error');
-      const data = await res.json();
-  
-      // Normalize the response
-      this.accounts = Array.isArray(data)
-        ? data
-        : (data && data.unipile_id) ? [data] : [];
-  
-      // Optionally: add an explicit empty state if needed
-      console.log("Accounts loaded:", this.accounts);
-    } catch (e) {
-      console.error('Real error loading accounts:', e);
-      // Show alert ONLY if it's truly a network/server error
-      alert('Failed to load accounts. Please try again.');
-    }
-  },
+      try {
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/fetch-configs?user_id=${this.userId}`);
+        const data = await res.json();
+    
+        const accountsArray = Array.isArray(data) ? data : (data?.unipile_id ? [data] : []);
+    
+        // Now enrich each account with LinkedIn profile
+        const enrichedAccounts = await Promise.all(accountsArray.map(async (account) => {
+          try {
+            const profileRes = await fetch(`https://n8n.sapidblue.in/webhook/Get-profile-of-user-linkedin?account_id=${account.unipile_id}&user_id=${this.userId}`);
+            if (!profileRes.ok) throw new Error("No profile");
+    
+            const profileData = await profileRes.json();
+            if (Array.isArray(profileData) && profileData.length > 0) {
+              const profile = profileData[0];
+              return {
+                ...account,
+                profile_enriched: true,
+                full_name: `${profile.first_name} ${profile.last_name}`,
+                headline: profile.headline,
+                location: profile.location,
+                profile_picture_url: profile.profile_picture_url_large,
+                connections_count: profile.connections_count,
+                follower_count: profile.follower_count,
+              };
+            } else {
+              return { ...account, profile_enriched: false };
+            }
+          } catch (err) {
+            return { ...account, profile_enriched: false };
+          }
+        }));
+    
+        this.accounts = enrichedAccounts;
+      } catch (e) {
+        console.error('Real error loading accounts:', e);
+        console.warn('No accounts found or failed to load.');
+      }
+    },
 
 
     async fetchLocations() {
@@ -194,9 +230,12 @@ function accountsDashboard() {
     },
     
     logout() {
-    localStorage.clear(); // Optional: remove any stored user data
-    window.location.href = "auth.html"; // Redirect to login
-    },
+    if (confirm("Are you sure you want to log out?")) {
+      localStorage.clear();
+      window.location.href = "auth.html";
+    }
+  },
+
 
 
     async toggleConnection(account) {
@@ -254,7 +293,7 @@ function accountsDashboard() {
 
     async connectNewAccount() {
       try {
-        const res = await fetch(`https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${userId}`);
+        const res = await fetch(`https://n8n.sapidblue.in/webhook/generate-auth-link?user_id=${this.userId}`);
         const data = await res.json();
         if (data && data[0]?.url) {
           window.location.href = data[0].url;
