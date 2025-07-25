@@ -18,6 +18,7 @@
       <div class="flex items-center gap-3">
         <button class="px-4 py-2 border border-gray-300 rounded-md text-sm hover:bg-gray-100">📘 Documentation</button>
         <button @click="connectNewAccount" class="px-4 py-2 bg-gray-900 text-white rounded-md text-sm hover:bg-black">➕ Connect an account</button>
+        <button @click="logout" class="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">🚪 Log Out </button>
       </div>
     </div>
 
@@ -191,6 +192,12 @@ function accountsDashboard() {
         console.error("Failed to fetch locations", e);
       }
     },
+    
+    logout() {
+    localStorage.clear(); // Optional: remove any stored user data
+    window.location.href = "login.html"; // Redirect to login
+    },
+
 
     async toggleConnection(account) {
       account.status = account.status === 'CONNECTED' ? 'DISCONNECTED' : 'CONNECTED';
