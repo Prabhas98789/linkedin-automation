@@ -129,41 +129,47 @@
         await this.fetchConnections(1);
       },
 
-      async fetchConnections(page = 1) {
-        const seen = new Set();
-        const cleaned = [];
-        const desired = this.itemsPerPage;
-        let offset = (page - 1) * desired;
-        try {
-          while (cleaned.length < desired) {
-            const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${desired + 10}&filter_text=${encodeURIComponent(this.searchText)}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            if (!Array.isArray(data) || data.length === 0) break;
-            for (const item of data) {
-              const obj = this.cleanObject(item);
-              if (!seen.has(obj.member_id)) {
-                seen.add(obj.member_id);
-                cleaned.push(obj);
-              }
-              if (cleaned.length >= desired) break;
-            }
-            offset += desired + 10;
+     async fetchConnections(page = 1) {
+    const seen = new Set();
+    const cleaned = [];
+    const desired = this.itemsPerPage;
+    const limit = desired * 2; // Fetch slightly more to allow deduplication
+    const offset = (page - 1) * desired;
+  
+    try {
+      const url = `https://n8n.sapidblue.in/webhook/Get-first-connection-list?account_id=${this.uid}&user_id=${this.userId}&offset=${offset}&limit=${limit}&filter_text=${encodeURIComponent(this.searchText)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+  
+      if (Array.isArray(data)) {
+        for (const item of data) {
+          const obj = this.cleanObject(item);
+          if (!seen.has(obj.member_id)) {
+            seen.add(obj.member_id);
+            cleaned.push(obj);
           }
-          this.paginatedPeople = cleaned;
-          this.people = cleaned;
-          const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
-          this.totalPages = Math.max(1, Math.ceil(total / desired));
-          this.currentPage = page;
-
-          if (this.paginatedPeople.length > 0) {
-            await this.selectConnection(this.paginatedPeople[0]);
-          }
-
-        } catch (err) {
-          console.error("Connection fetch error:", err);
+          if (cleaned.length >= desired) break;
         }
-      },
+  
+        this.paginatedPeople = cleaned;
+        this.people = cleaned;
+  
+        const total = parseInt(this.clean(cleaned[0]?.total_count)) || (page * desired);
+        this.totalPages = Math.max(1, Math.ceil(total / desired));
+        this.currentPage = page;
+  
+        if (this.paginatedPeople.length > 0) {
+          await this.selectConnection(this.paginatedPeople[0]);
+        }
+      } else {
+        console.warn("Unexpected data format:", data);
+      }
+  
+    } catch (err) {
+      console.error("Connection fetch error:", err);
+    }
+  },
+
 
        async selectConnection(person) {
         this.selectedConnection = person;
